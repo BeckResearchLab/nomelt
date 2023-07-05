@@ -1,0 +1,11 @@
+model:
+  pretrained_model: "t5-base"
+data:
+  db_file: "data.db"
+  min_temp_diff: 10
+  min_align_cov: 0.75
+  kgram: 3
+  minhash_threshold: 0.8
+training:
+  epochs: 10
+  batch_size: 32

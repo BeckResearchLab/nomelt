@@ -1,0 +1,16 @@
+stages:
+  train:
+    cmd: python train.py
+    deps:
+      - train.py
+      - params.yaml
+    params:
+      - model.pretrained_model
+      - data.db_file
+      - data.min_temp_diff
+      - data.kgram
+      - data.minhash_threshold
+      - training.epochs
+      - training.batch_size
+    outs:
+      - results
