@@ -6,6 +6,7 @@ data:
   min_align_cov: 0.75
   kgram: 3
   minhash_threshold: 0.8
+  minhash_num_perm: 128
 training:
   epochs: 10
   batch_size: 32

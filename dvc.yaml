@@ -1,16 +1,13 @@
 stages:
-  train:
-    cmd: python train.py
+  prepare_data:
+    cmd: python prepare_data.py
     deps:
-      - train.py
-      - params.yaml
+      - ./scripts/prepare_data.py
+      - ./nomelt/deduplication.py
+      - ./data/database.ddb
     params:
-      - model.pretrained_model
-      - data.db_file
       - data.min_temp_diff
       - data.kgram
       - data.minhash_threshold
-      - training.epochs
-      - training.batch_size
     outs:
-      - results
+      - ./data/dataset/

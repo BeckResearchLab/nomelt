@@ -9,10 +9,13 @@ import pandas as pd
 import numpy as np
 import duckdb as ddb
 import re
+import dvc.api
 
 import datasets
 import sklearn.utils
 import codecarbon
+
+import nomelt.deduplication
 
 if 'SLURM_NTASKS' in os.environ:
     CPU_COUNT = int(os.environ['SLURM_NTASKS'])
@@ -51,7 +54,6 @@ def load_data(db_file, min_temp_diff, min_align_cov=0.75):
     conn.close()
     return dataset
 
-
 if __name__ == '__main__':
     # start logger
     logger.setLevel(getattr(logging, LOGLEVEL))
@@ -59,25 +61,19 @@ if __name__ == '__main__':
     formatter = logging.Formatter('%(filename)-12s %(asctime)s;%(funcName)-12s: %(levelname)-8s %(message)s')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
-    utils_logger = logging.getLogger('l2tml_utils')
+    utils_logger = logging.getLogger('nomelt')
     utils_logger.setLevel(getattr(logging, LOGLEVEL))
     utils_logger.addHandler(fh)
-    
-    # create dirs
-    if not os.path.exists('./data/ogt_protein_regressor/data'):
-        os.makedirs('./data/ogt_protein_regressor/data')
 
     # device settings
     logger.info(f'Using {CPU_COUNT} cpus for multiprocessing')
 
     # load parameters
-    with open("./params.yaml", "r") as stream:
-        params = yaml_load(stream)
-    logger.info(f"Loaded parameters: {params}")
+    params = dvc.api.params_show(stages="prepare_data")
     
     # start carbon tracker for data processing
     data_tracker = codecarbon.OfflineEmissionsTracker( 
-        project_name="data_process_regressor",
+        project_name="data_processr",
         output_dir="./data/",
         country_iso_code="USA",
         region="washington"
@@ -86,6 +82,10 @@ if __name__ == '__main__':
     
     # get data
     ds = load_data('../data/database.ddb', params['min_temp_diff'], params['min_align_cov'])
+
+    # remove similar pairs
+    ds = nomelt.deduplication.remove_similar_pairs(ds, sequence_key='meso_seq', jaccard_threshold=params['minhash_threshold'], num_perm=params['minhash_num_perm'], k=params['kgram'])
+
     # split the data
     data_dict = ds.train_test_split(test_size=0.1)
     logger.info(f"Split data into train and test.")
