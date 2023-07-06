@@ -1,7 +1,10 @@
 model:
   pretrained_model: "t5-base"
+  max_length: 250
+  max_target_length: 300
+  model_hyperparams:
+    dropout_rate: 0.1
 data:
-  db_file: "data.db"
   min_temp_diff: 10
   min_align_cov: 0.75
   kgram: 3
@@ -9,4 +12,15 @@ data:
   minhash_num_perm: 128
 training:
   epochs: 10
-  batch_size: 32
+  per_device_batch_size: 32
+  learning_rate: 1e-3
+  gradient_accumulation: 25
+  grad_checkpointing: true
+  lr_scheduler_type: 'linear'
+  warmup_ratio: 0.1
+  optim: "adafactor"
+  optim_args: 
+    scale_parameter: false
+    relative_step: false
+  fp16: true
+
