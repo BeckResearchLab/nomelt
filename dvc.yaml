@@ -9,5 +9,6 @@ stages:
       - data.min_temp_diff
       - data.kgram
       - data.minhash_threshold
+      - data.minhash_num_perm
     outs:
       - ./data/dataset/
