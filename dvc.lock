@@ -1,0 +1,38 @@
+schema: '2.0'
+stages:
+  prepare_data:
+    cmd: python scripts/prepare_data.py
+    deps:
+    - path: ./data/database.ddb
+      hash: md5
+      md5: b51482d0b753298b2bd522729dc69767
+      size: 14074523648
+    - path: ./nomelt/deduplication.py
+      hash: md5
+      md5: 43a77592878fbad6b852803f56c01114
+      size: 13055
+    - path: ./scripts/prepare_data.py
+      hash: md5
+      md5: e227cce913d661b6629e0b73b9b43e2f
+      size: 7214
+    params:
+      params.yaml:
+        data.dev_sample_data: false
+        data.keep_only_extremes: false
+        data.kgram: 4
+        data.min_align_cov: 0.95
+        data.min_temp_diff: 35.0
+        data.min_thermo_temp: 65.0
+        data.minhash_num_perm: 128
+        data.minhash_threshold: 0.38
+        data.test_size: 0.1
+    outs:
+    - path: ./data/data_metrics.yaml
+      hash: md5
+      md5: c2594fb0edbd64d02385f942c47aea54
+      size: 72
+    - path: ./data/dataset/
+      hash: md5
+      md5: 4d5d2b5ab02f3c6cc7618b1162923645.dir
+      size: 711707316
+      nfiles: 8

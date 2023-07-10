@@ -21,6 +21,7 @@ from functools import partial
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 from datasets import Dataset
+import pandas as pd
 from tqdm import tqdm
 
 from datasketch import MinHash, MinHashLSH
@@ -129,6 +130,8 @@ class DuplicationIndex:
 def _compute_min_hash(ins):
     sequence_key, (e, k, num_perm) = ins
     index, data = e
+    if 'index' in data:
+        index = data['index']
     min_hash = compute_min_hash(data[sequence_key], k=k, num_perm=num_perm)
     return index, min_hash
 
@@ -146,7 +149,6 @@ def _minhash_iter(dataset_iterator: Type[Dataset], k, num_perm, sequence_key):
             if data is not None:
                 yield data
 
-
 def make_duplicate_clusters(
     dataset: Type[Dataset],
     jaccard_threshold: float,
@@ -163,10 +165,10 @@ def make_duplicate_clusters(
     
     
     # prepare iterators
-    for filename, min_hash in tqdm(ThreadedIterator(_minhash_iter(enumerate(dataset), k=k, num_perm=num_perm, sequence_key=sequence_key), max_queue_size=100)):
-        di.add(filename, min_hash)
+    for index, min_hash in tqdm(ThreadedIterator(_minhash_iter(enumerate(dataset), k=k, num_perm=num_perm, sequence_key=sequence_key), max_queue_size=100)):
+        di.add(index, min_hash)
     
-    # Returns a List[Cluster] where Cluster is List[str] with the filenames.
+    # Returns a List[Cluster] where Cluster is List[str] with the index.
     return di.get_duplicate_clusters()
 
 _shared_dataset = None
@@ -259,35 +261,25 @@ def deduplicate_dataset(
         k (int, default=3)
             size of k grams for representation
     Returns:
-        ds_dedup (Type[Dataset]):
-            The deduplicated dataset.
-        duplicate_clusters (List[List[Dict]]):
-            The list of duplicate clusters.
-            Each cluster is a list of dicts with the following keys:
-            - base_index : int
-                The index of the code in the original dataset.
-            - repo_name : str
-            - path : str
-            - copies : int
-                The number of copies of the code in the cluster. (find_cluster_extremes)
-            - is_extreme : bool
-                Whether the code is an extreme in the cluster.
-            All the codes in the cluster are removed from the dataset except the extremes.
-    Example:
-        >>> from datasets import load_dataset
-        >>> from minhash_deduplication import deduplicate_dataset
-        >>> ds = load_dataset("lvwerra/codeparrot-clean", split="train")
-        >>> ds_dedup, duplicate_clusters = deduplicate_dataset(ds, jaccard_threshold=0.85)
+        duplicate_clusters Dict[Dict]
+            keys are cluster indexes, values are cluster data, contained indexes, and extreme indexes
+            cluster data is dict of raw cluster from original implementation
+              list of dict with keys "base_index": the id, "is_extreme": boolean, "copies": number of copies (if extreme)
+        cluster_summary DataFrame
+            Contains cluster id, number of items, number of extreme items
+        duplicate_indices Set[int]
+            Set of indices of duplicate items in clusters
+        extreme_indices Set[int]
+            Set of indices of extreme items in clusters
     """
-    duplicate_clusters = make_duplicate_clusters(dataset, jaccard_threshold, sequence_key=sequence_key)
+    duplicate_clusters = make_duplicate_clusters(dataset, jaccard_threshold, sequence_key=sequence_key, k=k, num_perm=num_perm)
     duplicate_indices = set(x["base_index"] for cluster in duplicate_clusters for x in cluster)
     extreme_dict = {}
     extremes_clusters = find_extremes(duplicate_clusters, dataset, jaccard_threshold, k=k, num_perm=num_perm, sequence_key=sequence_key)
     for extremes in extremes_clusters:
         for element in extremes:
             extreme_dict[element["base_index"]] = element
-    remove_indices = duplicate_indices - set(extreme_dict.keys())
-    ds_filter = dataset.filter(lambda x, idx: idx not in remove_indices, with_indices=True)
+    extreme_indices = set(extreme_dict.keys())
 
     # update duplicate_clusters
     for cluster in duplicate_clusters:
@@ -296,10 +288,25 @@ def deduplicate_dataset(
             if element["is_extreme"]:
                 element["copies"] = extreme_dict[element["base_index"]]["copies"]
 
+    cluster_summary = []
+    new_duplicate_clusters = {}
+    for i, cluster in enumerate(duplicate_clusters):
+        cluster_summary.append({
+            "cluster_id": i,
+            "cluster_size": len(cluster),
+            "extreme_size": sum(x["is_extreme"] for x in cluster),
+        })
+        cluster_ids = set(x["base_index"] for x in cluster)
+        cluster_extreme_ids = set(x["base_index"] for x in cluster if x["is_extreme"])
+        new_duplicate_clusters[i] = {'cluster': cluster, 'ids': cluster_ids, 'extreme_ids': cluster_extreme_ids}
+    cluster_summary = pd.DataFrame(cluster_summary)
+    
+
     logger.info(f"Original dataset size before deduplication: {len(dataset)}")
     logger.info(f"Number of duplicate clusters: {len(duplicate_clusters)}")
-    logger.info(f"Files in duplicate cluster: {len(duplicate_indices)}")
-    logger.info(f"Unique files in duplicate cluster: {len(extreme_dict)}")
-    logger.info(f"Filtered dataset size: {len(ds_filter)}")
+    logger.info(f"Items in duplicate cluster: {len(duplicate_indices)}")
+    logger.info(f"Extreme items in duplicate cluster: {len(extreme_dict)}")
+    logger.info(f"Number of items not in duplicate clusters: {len(dataset) - len(duplicate_indices)}")
+    logger.info(f"Summary of duplicate clusters: \n{cluster_summary.to_string()}")
 
-    return ds_filter, duplicate_clusters
+    return new_duplicate_clusters, cluster_summary, duplicate_indices, extreme_indices

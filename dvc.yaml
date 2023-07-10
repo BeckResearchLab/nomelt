@@ -1,14 +1,23 @@
 stages:
   prepare_data:
-    cmd: python prepare_data.py
+    wdir: ./
+    cmd: python scripts/prepare_data.py
     deps:
       - ./scripts/prepare_data.py
       - ./nomelt/deduplication.py
       - ./data/database.ddb
     params:
       - data.min_temp_diff
+      - data.min_thermo_temp
+      - data.min_align_cov
       - data.kgram
       - data.minhash_threshold
       - data.minhash_num_perm
+      - data.keep_only_extremes
+      - data.test_size
+      - data.dev_sample_data
     outs:
       - ./data/dataset/
+    metrics:
+      - ./data/data_metrics.yaml:
+          cache: false
