@@ -10,15 +10,14 @@ from pyrosetta import init, pose_from_pdb, create_score_function
 from pyrosetta.rosetta.protocols.minimization_packing import MinMover
 
 @dataclass
-class MinimizationParameters:
+class RosettaMinimizationParameters:
     """These default parmaeters are the ones used in the paper."""
-    pdb_file: str
     scorefxn_name: str = 'ref2015'
     min_type: str = 'lbfgs_armijo_nonmonotone'
     tolerance: float = 0.001
     use_constraints: bool = False
 
-def minimize_structure(params: MinimizationParameters):
+def minimize_structure(pdb_file: str, params: RosettaMinimizationParameters):
     """
     This function minimizes a protein structure and calculates its folding free energy.
 
@@ -44,7 +43,7 @@ def minimize_structure(params: MinimizationParameters):
     # Initialize PyRosetta
     init()
     # Create a pose from the PDB file
-    pose = pose_from_pdb(params.pdb_file)
+    pose = pose_from_pdb(pdb_file)
     # Create a score function
     scorefxn = create_score_function(params.scorefxn_name)
     # Add constraints to the score function, if requested
