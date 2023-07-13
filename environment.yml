@@ -22,9 +22,12 @@ dependencies:
   - pip:
     - duckdb==0.7.1
     - codecarbon==2.1.4
-    - dvclive==2.1.0
+    - dvclive==2.12.1
     - datasketch
+    - accelerate
     - dpu_utils
     - nltk
     - git-lfs
+    - sacrebleu
+    - rouge_score
 

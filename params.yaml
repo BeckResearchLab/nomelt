@@ -1,26 +1,34 @@
+data:
+  min_thermo_temp: 65.0
+  min_temp_diff: 35.0
+  min_align_cov: 0.95
+  kgram: 4
+  minhash_threshold: 0.2
+  minhash_num_perm: 128
+  keep_only_extremes: false
+  test_size: 0.1
+  dev_sample_data: false
 model:
-  pretrained_model: "t5-base"
-  max_length: 250
-  max_target_length: 300
+  pretrained_model: "Rostlab/prot_t5_xl_uniref50"
   model_hyperparams:
     dropout_rate: 0.1
-data:
-  min_temp_diff: 10
-  min_align_cov: 0.75
-  kgram: 3
-  minhash_threshold: 0.8
-  minhash_num_perm: 128
+  task: 'translation' # one of 'reconstruction', 'translation'
 training:
-  epochs: 10
-  per_device_batch_size: 32
-  learning_rate: 1e-3
-  gradient_accumulation: 25
-  grad_checkpointing: true
+  keep_only_extremes: false # equivalent to data.keep_only_extremes, except the filtering happens before train time instead of in creating the saved dataset
+  max_length: 250
+  epochs: 5
+  per_device_batch_size: 6
+  auto_find_batch_size: true
+  learning_rate: 1e-4
+  gradient_accumulation: 24
+  gradient_checkpointing: true
+  saves_per_epoch: 5 # null means save only at the end of training
   lr_scheduler_type: 'linear'
   warmup_ratio: 0.1
+  label_smoothing_factor: 0.0
   optim: "adafactor"
-  optim_args: 
-    scale_parameter: false
-    relative_step: false
+  optim_args: "scale_parameter=False,relative_step=False"
   fp16: true
+  max_eval_examples: 1000
+  dev_sample_data: 500
 

@@ -155,16 +155,25 @@ if __name__ == '__main__':
         pass
     train = ds.select(train_indexes).shuffle()
     test = ds.select(test_indexes).shuffle()
+    group_shuffle_splitter = sklearn.model_selection.GroupShuffleSplit(
+        n_splits=1, train_size=1-params['data']['test_size'])
+    for train_indexes, eval_indexes in group_shuffle_splitter.split(X=None, groups=train['cluster']):
+        pass
+    eval = train.select(eval_indexes).shuffle()
+    train = train.select(train_indexes).shuffle()
     logger.info(f"""SPLITTING REPORT
 -------------------
 Train size: {len(train)}
 Train clusters: {[c for c in set(train['cluster']) if c<0]}
 Train fraction of examples in clusters: {sum(np.array(train['cluster']) < 0)/len(train)}
+Eval size: {len(eval)}
+Eval clusters: {[c for c in set(eval['cluster']) if c<0]}
+Eval fraction of examples in clusters: {sum(np.array(eval['cluster']) < 0)/len(eval)}
 Test size: {len(test)}
 Test clusters: {[c for c in set(test['cluster']) if c<0]}
 Test fraction of examples in clusters: {sum(np.array(test['cluster']) < 0)/len(test)}
 """)
-    data_dict = datasets.DatasetDict({'train': train, 'test': test})
+    data_dict = datasets.DatasetDict({'train': train, 'eval': eval, 'test': test})
 
     logger.info(f'Final datasets: {data_dict}')
     data_dict.cleanup_cache_files()
@@ -177,6 +186,7 @@ Test fraction of examples in clusters: {sum(np.array(test['cluster']) < 0)/len(t
     metrics = {
         'data_co2': float(co2),
         'data_n_train': len(data_dict['train']),
+        'data_n_eval': len(data_dict['eval']),
         'data_n_test': len(data_dict['test']),
     }
 
