@@ -21,3 +21,42 @@ stages:
     metrics:
       - ./data/data_metrics.yaml:
           cache: false
+  train:
+    wdir: ./
+    cmd: python scripts/train.py
+    deps:
+      - ./scripts/train.py
+      - ./data/dataset/
+    params:
+      - training.keep_only_extremes
+      - training.dev_sample_data
+      - training.max_length
+      - training.per_device_batch_size
+      - training.gradient_accumulation
+      - training.auto_find_batch_size
+      - training.saves_per_epoch
+      - training.epochs
+      - training.gradient_checkpointing
+      - training.learning_rate
+      - training.lr_scheduler_type
+      - training.label_smoothing_factor
+      - training.warmup_ratio
+      - training.optim
+      - training.optim_args
+      - training.max_eval_examples
+      - training.fp16
+      - model.pretrained_model
+      - model.task
+      - model.model_hyperparams
+    outs:
+      - ./data/nomelt-model/model/:
+          persist: true
+      - ./data/nomelt-model/live/report.md:
+          cache: false
+    metrics:
+      - ./data/nomelt-model/live/metrics.json:
+          cache: false
+    plots:
+      - ./data/nomelt-model/live/static/:
+          cache: false
+
