@@ -7,10 +7,24 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from nomelt.thermo_estimation.alphafold import run_alphafold, AlphaFoldParams
-from nomelt.thermo_estimation.rosetta import rosetta_minimization, RosettaMinimizationParameters
+from nomelt.thermo_estimation.rosetta import minimize_structures, RosettaMinimizationParameters
 
 import logging
 logger = logging.getLogger(__name__)
+
+class ThermoStabilityEstimator:
+    """Abstract parent class."""
+    def __init__(self, sequences: list[str], ids: list[str], args=None):
+        assert len(sequences) == len(ids)
+        self.ids = ids
+        self.sequences = sequences
+
+    def run(self) -> Dict[str, float]:
+        """Run the estimator on the specified sequences.
+        
+        Returns:
+            Dict[str, float]: A dictionary map of ids to estimated thermal stability"""
+        raise NotImplementedError()
 
 @dataclass
 class mAFminDGArgs:
@@ -19,39 +33,28 @@ class mAFminDGArgs:
     af_params = AlphaFoldParams()
     rosetta_params = RosettaMinimizationParameters()
 
-class mAFminDGEstimator:
+class mAFminDGEstimator(ThermoStabilityEstimator):
+    """Uses method of AlphaFold ensembles and Rosetta minimization to estimate the folding free energy of a protein.
+    
+    See the following paper for more details:
+    https://doi.org/10.1021/acs.jcim.2c01083
+    """
     def __init__(self, sequences: list[str], ids: list[str], args: mAFminDGArgs):
-        self.ids = ids
-        self.sequences = sequences
+        super().__init__(sequences, ids)
         self.af_params = args.af_params
         self.rosetta_params = args.rosetta_params
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-
     def generate_alphafold_ensembles(self):
-        self.logger.info("Generating AlphaFold ensembles...")
+        logger.info("Generating AlphaFold ensembles...")
         run_alphafold(self.sequences, self.ids, self.af_params)
-        self.logger.info("Generation of AlphaFold ensembles completed.")
+        logger.info("Generation of AlphaFold ensembles completed.")
 
-    def _rosetta_minimization_single(self, pdb_path: str, **kwargs) -> float:
-        self.logger.info(f"Running Rosetta minimization for {pdb_path}...")
-        energy = rosetta_minimization(pdb_path, **kwargs)
-        self.logger.info(f"Completed Rosetta minimization for {pdb_path}.")
-        return energy
-
-    def _run_rosetta_minimization(self, pdb_paths: List[str], **kwargs) -> Dict[str, float]:
-        energies = []
-        for pdb_path in pdb_paths:
-            energies.append(self._rosetta_minimization_single(pdb_path, **kwargs))
-        return energies
-
-    def compute_ensemble_energies(directory: str, self, **kwargs) -> Dict[str, float]:
+    def compute_ensemble_energies(self, directory: str, ) -> Dict[str, float]:
         """Compute energies for all PDB files (based on parameters) in the specified directory.
         
         Group them by sequence ID, which occurs first in the filename, and aggregate the energies.
         """
-        self.logger.info("Computing ensemble energies...")
+        logger.info("Computing ensemble energies...")
         all_energies = {}
         output_type = 'relaxed' if self.af_params.af_relaxed else 'unrelaxed'
         output_models = self.af_params.af_models
@@ -67,7 +70,7 @@ class mAFminDGEstimator:
             # check the number of pdb files matcches expected count
             if len(pdb_paths) != len(output_models) * self.af_params.num_replicates:
                 raise ValueError(f"Expected {len(output_models) * self.af_params.num_replicates} PDB files for sequence {sequence_id}, using {output_models} models, and {self.af_params.num_replicates} replicates, but found {len(pdb_paths)}")
-            energies = self._run_rosetta_minimization(pdb_paths, **kwargs)
+            energies = minimize_structures(pdb_paths, self.rosetta_params)
             all_energies[sequence_id] = (np.mean(energies), np.std(energies))
             logger.info(f"Computed energies for {sequence_id}: {all_energies[sequence_id]}")
         return all_energies

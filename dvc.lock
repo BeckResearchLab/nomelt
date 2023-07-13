@@ -17,7 +17,7 @@ stages:
       size: 7789
     params:
       params.yaml:
-        data.dev_sample_data: 10000
+        data.dev_sample_data: false
         data.keep_only_extremes: false
         data.kgram: 4
         data.min_align_cov: 0.95
@@ -29,13 +29,13 @@ stages:
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 025c860ac5057f5b8db49821abdd9227
-      size: 86
+      md5: c8bc52f62aeda48a4968979000e8cf1f
+      size: 92
     - path: ./data/dataset/
       hash: md5
-      md5: f3fea8fad4ebf84a9d9b7936b1fc49b9.dir
-      size: 4371087
-      nfiles: 10
+      md5: eacd5af5bb852ab365f9e863239cfae5.dir
+      size: 711638922
+      nfiles: 11
   train:
     cmd: python scripts/train.py
     deps:
