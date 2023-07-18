@@ -30,7 +30,6 @@ stages:
     params:
       - training.keep_only_extremes
       - training.dev_sample_data
-      - training.max_length
       - training.per_device_batch_size
       - training.gradient_accumulation
       - training.auto_find_batch_size
@@ -45,6 +44,8 @@ stages:
       - training.optim_args
       - training.max_eval_examples
       - training.fp16
+      - model.generation_max_length
+      - model.generation_num_beams
       - model.pretrained_model
       - model.task
       - model.model_hyperparams

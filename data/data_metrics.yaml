@@ -1,3 +1,4 @@
-data_co2: 0.01200347323052486
-data_n_test: 158848
-data_n_train: 1470331
+data_co2: 0.03220306914580105
+data_n_eval: 136533
+data_n_test: 161642
+data_n_train: 1331004

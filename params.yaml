@@ -12,23 +12,25 @@ model:
   pretrained_model: "Rostlab/prot_t5_xl_uniref50"
   model_hyperparams:
     dropout_rate: 0.1
+    relative_attention_max_distance: 128 # this is default, but may be worth changing to max length
   task: 'translation' # one of 'reconstruction', 'translation'
+  generation_max_length: 250
+  generation_num_beams: 1
 training:
   keep_only_extremes: false # equivalent to data.keep_only_extremes, except the filtering happens before train time instead of in creating the saved dataset
-  max_length: 250
-  epochs: 5
-  per_device_batch_size: 6
-  auto_find_batch_size: true
+  epochs: 1
+  per_device_batch_size: 1
+  auto_find_batch_size: false
   learning_rate: 1e-4
-  gradient_accumulation: 24
+  gradient_accumulation: 1
   gradient_checkpointing: true
-  saves_per_epoch: 5 # null means save only at the end of training
+  saves_per_epoch: null # null means save only at the end of training
   lr_scheduler_type: 'linear'
   warmup_ratio: 0.1
   label_smoothing_factor: 0.0
   optim: "adafactor"
   optim_args: "scale_parameter=False,relative_step=False"
   fp16: true
-  max_eval_examples: 1000
-  dev_sample_data: 500
+  max_eval_examples: 500    # only during training
+  dev_sample_data: 20
 

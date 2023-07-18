@@ -1,64 +1,56 @@
-import dvclive
-import dvc.api
-from dvclive.utils import standardize_metric_name
-import transformers
+# ruff: noqa: ARG002
 from typing import Optional
 
-class DVCLiveCallback(transformers.TrainerCallback):
-    """HF callback for use with DVCLive.
-    
-    DVC's implimentation own implimentation has the following non-ideal features:
-    - dvc live step is each logging step, instead of each eval step
-    - it manually saves model at each epoch. 
+from transformers import (
+    TrainerCallback,
+    TrainerControl,
+    TrainerState,
+    TrainingArguments,
+)
+from transformers.trainer import Trainer
 
-    Here, on evaluate the metrics are recorded, and triggers the trainer control to
-    save at this gradient ste. Then, on save, the dvclive step is taken.
-    """
-    
-    def __init__(self, live: Optional[dvclive.Live] = None, **kwargs):
+from dvclive import Live
+from dvclive.utils import standardize_metric_name
+
+
+class DVCLiveCallback(TrainerCallback):
+    def __init__(self, model_file=None, live: Optional[Live] = None, **kwargs):
         super().__init__()
-        self.live = live if live is not None else dvclive.Live(**kwargs)
+        self.model_file = model_file
+        self.live = live if live is not None else Live(**kwargs)
 
     def on_log(
         self,
-        args: transformers.TrainingArguments,
-        state: transformers.TrainerState,
-        control: transformers.TrainerControl,
-        **kwargs
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
     ):
-        # saves training status as metrics to dvc, note that 
-        # this only occurs when an evaluation step is necessary
-        # logs are not available in the on_evaluate event
         logs = kwargs["logs"]
         for key, value in logs.items():
-            try:
-                self.live.log_metric(standardize_metric_name(key, __name__), value)
-            except:
-                pass # some things floating in the logs may not be recordable by dvc
-            self.live.next_step()
+            self.live.log_metric(standardize_metric_name(key, __name__), value)
+        self.live.next_step()
 
-    def on_evaluate(
+    def on_epoch_end(
         self,
-        args: transformers.TrainingArguments,
-        state: transformers.TrainerState,
-        control: transformers.TrainerControl,
-        **kwargs
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
     ):
-        metrics = kwargs.get('metrics')
-        for key, value in metrics.items():
-            try:
-                self.live.log_metric(standardize_metric_name(key, __name__), value)
-            except:
-                pass # some things floating in the logs may not be recordable by dvc
-        # if not already going to save, make sure it does
-        # on_save above will be called and next step starts
-        control.should_save=True
+        if self.model_file:
+            model = kwargs["model"]
+            model.save_pretrained(self.model_file)
+            tokenizer = kwargs.get("tokenizer")
+            if tokenizer:
+                tokenizer.save_pretrained(self.model_file)
+            self.live.log_artifact(self.model_file)
 
-    def on_train_end(
-        self,
-        args: transformers.TrainingArguments,
-        state: transformers.TrainerState,
-        control: transformers.TrainerControl,
-        **kwargs
-    ):  
-        self.live.end()
+    # def on_train_end(
+    #     self,
+    #     args: TrainingArguments,
+    #     state: TrainerState,
+    #     control: TrainerControl,
+    #     **kwargs,
+    # ):
+    #     self.live.end()
