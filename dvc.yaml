@@ -23,11 +23,16 @@ stages:
           cache: false
   train:
     wdir: ./
-    cmd: python scripts/train.py
+    cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train.py 
     deps:
       - ./scripts/train.py
       - ./data/dataset/
+      - ./.config/accelerate/default_config.yaml
     params:
+      - model.pretrained_model
+      - model.task
+      - model.generation_max_length
+      - model.model_hyperparams
       - training.keep_only_extremes
       - training.dev_sample_data
       - training.per_device_batch_size
@@ -44,11 +49,10 @@ stages:
       - training.optim_args
       - training.max_eval_examples
       - training.fp16
-      - model.generation_max_length
-      - model.generation_num_beams
-      - model.pretrained_model
-      - model.task
-      - model.model_hyperparams
+      - training.bf16
+      - training.early_stopping
+      - training.early_stopping_patience
+      - training.early_stopping_threshold
     outs:
       - ./data/nomelt-model/model/:
           persist: true
@@ -57,7 +61,24 @@ stages:
     metrics:
       - ./data/nomelt-model/live/metrics.json:
           cache: false
+      - ./data/nomelt-model/live/plots/:
+          cache: false
+          persist: true
     plots:
       - ./data/nomelt-model/live/static/:
           cache: false
+  score_model:
+    wdir: ./
+    cmd: python scripts/score_model.py
+    deps:
+      - ./scripts/score_model.py
+      - ./data/nomelt-model/model/
+      - ./data/dataset/
+    params:
+      - model.generation_max_length
+      - model.generation_num_beams
+    outs:
+      - ./data/nomelt-model/test_metrics.yaml:
+          cache: false
+
 

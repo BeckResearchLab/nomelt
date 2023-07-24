@@ -48,7 +48,19 @@ def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
     # Load data from SQL database
     conn = ddb.connect(db_file, read_only=True)
     query = f"""
-    SELECT proteins_m.protein_seq AS meso_seq, proteins_t.protein_seq AS thermo_seq, m.taxid
+    SELECT 
+        proteins_m.protein_seq AS meso_seq,
+        proteins_t.protein_seq AS thermo_seq,
+        m.taxid,
+        pairs.query_align_cov,
+        pairs.subject_align_cov,
+        pairs.bit_score,
+        pairs.scaled_local_symmetric_percent_id,
+        LENGTH(proteins_m.protein_seq) AS meso_seq_len,
+        LENGTH(proteins_t.protein_seq) AS thermo_seq_len,
+        ABS(meso_seq_len - thermo_seq_len) AS seq_len_diff,
+        m.temperature AS meso_temp,
+        t.temperature AS thermo_temp,
     FROM pairs
     INNER JOIN proteins AS proteins_m ON (pairs.meso_pid=proteins_m.pid)
     INNER JOIN proteins AS proteins_t ON (pairs.thermo_pid=proteins_t.pid)

@@ -31,20 +31,31 @@ class DVCLiveCallback(TrainerCallback):
             self.live.log_metric(standardize_metric_name(key, __name__), value)
         self.live.next_step()
 
-    def on_epoch_end(
-        self,
-        args: TrainingArguments,
-        state: TrainerState,
-        control: TrainerControl,
-        **kwargs,
-    ):
-        if self.model_file:
-            model = kwargs["model"]
-            model.save_pretrained(self.model_file)
-            tokenizer = kwargs.get("tokenizer")
-            if tokenizer:
-                tokenizer.save_pretrained(self.model_file)
-            self.live.log_artifact(self.model_file)
+    # def on_save(
+    #     self,
+    #     args: TrainingArguments,
+    #     state: TrainerState,
+    #     control: TrainerControl,
+    #     **kwargs,
+    # ):
+    #     if self.model_file:
+    #         self.live.log_artifact(self.model_file)
+            
+
+    # def on_epoch_end(
+    #     self,
+    #     args: TrainingArguments,
+    #     state: TrainerState,
+    #     control: TrainerControl,
+    #     **kwargs,
+    # ):
+    #     if self.model_file:
+    #         model = kwargs["model"]
+    #         model.save_pretrained(self.model_file)
+    #         tokenizer = kwargs.get("tokenizer")
+    #         if tokenizer:
+    #             tokenizer.save_pretrained(self.model_file)
+    #         self.live.log_artifact(self.model_file)
 
     # def on_train_end(
     #     self,

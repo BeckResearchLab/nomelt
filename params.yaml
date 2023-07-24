@@ -15,22 +15,26 @@ model:
     relative_attention_max_distance: 128 # this is default, but may be worth changing to max length
   task: 'translation' # one of 'reconstruction', 'translation'
   generation_max_length: 250
-  generation_num_beams: 1
+  generation_num_beams: 10
 training:
-  keep_only_extremes: false # equivalent to data.keep_only_extremes, except the filtering happens before train time instead of in creating the saved dataset
+  keep_only_extremes: true # equivalent to data.keep_only_extremes, except the filtering happens before train time instead of in creating the saved dataset
   epochs: 1
-  per_device_batch_size: 1
+  early_stopping: false
+  early_stopping_patience: 2
+  early_stopping_threshold: 1.0
+  per_device_batch_size: 140
   auto_find_batch_size: false
-  learning_rate: 1e-4
-  gradient_accumulation: 1
+  learning_rate: 1.e-4
+  gradient_accumulation: 2
   gradient_checkpointing: true
-  saves_per_epoch: null # null means save only at the end of training
+  saves_per_epoch: 10 # null means save only at the end of training
   lr_scheduler_type: 'linear'
   warmup_ratio: 0.1
   label_smoothing_factor: 0.0
-  optim: "adafactor"
-  optim_args: "scale_parameter=False,relative_step=False"
-  fp16: true
-  max_eval_examples: 500    # only during training
-  dev_sample_data: 20
+  optim: "adamw_hf"
+  optim_args: null #"scale_parameter=False,relative_step=False"
+  fp16: false
+  bf16: true
+  max_eval_examples: 10000    # only during training
+  dev_sample_data: null
 
