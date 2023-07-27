@@ -74,9 +74,11 @@ Input wild-type sequence, variant sequence, estimator class, OptunaParams object
 Set the mutation set to be the set of all possible mutations. The two sequences are aligned and the mutations are determined by the alignment.
 See biopython pairwise2.align.globalxx for more details.
 The alignment output will be of the form:
+```
     MAKDBS--ASFASF--SFF
     ||  ||  ||||||  | |
     MA--BSSFASFASFBGSDF
+```
 Anywhere there is not a matching character, a mutation is assumed to have occurred, eg in the above example there are 7 mutation: 2 deletions, 4 insertions, and 1 substitution.
 We then assign an attribute to the class called `mutation_set` which is a dict of positions and tuples of (wt, variant) amino acids or gaps. We also now have
 attributes `aligned_wt` is the aligned wt sequence string including gaps. Needed so that we can assign mutations to the correct position in the variant sequence.
