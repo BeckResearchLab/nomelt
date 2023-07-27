@@ -1,9 +1,6 @@
 import accelerate
 import codecarbon
-import dvc.api
 from dvclive import Live
-import dvclive.huggingface
-from dvclive.huggingface import DVCLiveCallback
 import logging
 import numpy as np
 import os
@@ -11,6 +8,7 @@ import re
 import torch
 from pynvml import *
 import pprint
+from yaml import safe_load
 
 from datasets import load_from_disk
 from duckdb import connect as duckdb_connect
@@ -46,7 +44,6 @@ def print_gpu_utilization(index):
     print(f"GPU memory occupied: {info.used//1024**2} MB.")
 
 def main():
-
     # start logger
     logger.setLevel(getattr(logging, LOGLEVEL))
     fh = logging.FileHandler(LOGFILE, mode='w')
@@ -62,18 +59,19 @@ def main():
     accelerate_logger = logging.getLogger('accelerate')
     accelerate_logger.setLevel(getattr(logging, LOGLEVEL))
     accelerate_logger.addHandler(fh)
+    # connect accelerator just to check the params and to only use one process for data processing
+    accelerator = accelerate.Accelerator()
 
     # Load parameters from DVC
-    params = dvc.api.params_show(stages='train')
+    # retry until successful
+    with open('./params.yaml', 'r') as f:
+        params = safe_load(f)
 
     # load tokenizer
     try:
         tokenizer = AutoTokenizer.from_pretrained(params['model']['pretrained_model'])
     except:
         tokenizer = T5Tokenizer.from_pretrained(params['model']['pretrained_model'])
-
-    # connect accelerator just to check the params and to only use one process for data processing
-    accelerator = accelerate.Accelerator()
 
     logger.info(f"Got config from accelerator: {pprint.pformat(accelerator.__dict__, indent=4)}")
 
@@ -183,14 +181,13 @@ def main():
         evaluation_strategy=save_strat,
         eval_steps=steps_per_save,
         prediction_loss_only=True,
-        generation_max_length=params['model']['generation_max_length'],
-        generation_num_beams=params['model']['generation_num_beams'],
         save_strategy=save_strat,
         save_steps=steps_per_save,
         save_total_limit=20,
         logging_strategy='steps',
         logging_steps=1,
-        predict_with_generate=True,
+        predict_with_generate=False,
+        metric_for_best_model='eval_loss',
         load_best_model_at_end=True,
         # training parameters
         num_train_epochs=params['training']['epochs'],
@@ -209,40 +206,8 @@ def main():
         label_smoothing_factor=params['training']['label_smoothing_factor'],
         # precision
         fp16=params['training']['fp16'],
+        bf16=params['training']['bf16'],
     )
-
-    # define metrics to compute
-    def compute_metrics(outputs):
-        """We use:
-        - ter: translation edit rate
-        - Rouge 2: F1 score for bigrams
-        - Rouge L: score for longest common subsequences
-        - google_bleu: single sentence BLEU like score, minimum of recall and precision on 1, 2, 3, and 4 grams
-        """
-        # outputs encoded
-        predictions, labels = outputs.predictions, outputs.label_ids
-        predictions = np.where(predictions != -100, predictions, tokenizer.pad_token_id)
-        # decode
-        predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-        labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-        # outputs are list of strings, with spaces ## CHECK
-        out_metrics = {}
-        logger.info("Made predictions")
-        # tranlsation error rate
-        ter_metric = load('ter')
-        out_metrics.update(ter_metric.compute(predictions=predictions, references=labels, normalized=True, case_sensitive=False))
-        logger.info("Computed TER")
-        # rouge
-        # expects tokens sperated by spaces
-        rouge_metric = load('rouge')
-        out_metrics.update(rouge_metric.compute(predictions=predictions, references=labels, rouge_types=['rouge2', 'rougeL'], use_stemmer=True, use_aggregator=True))
-        logger.info("Computed Rouge")
-        # google bleu
-        bleu_metric = load('google_bleu')
-        out_metrics.update(bleu_metric.compute(predictions=predictions, references=labels, max_len=5))
-        logger.info("Computed BLEU")
-        return out_metrics
 
     # main process is prepared, all processes and begin
     accelerator.wait_for_everyone()
@@ -256,27 +221,24 @@ def main():
         eval_dataset=dataset['eval_sample'] if 'eval_sample' in dataset else dataset['eval'],
         data_collator=data_collator,
         tokenizer=tokenizer,
-        compute_metrics=compute_metrics,
     )
     if trainer.accelerator.is_main_process:
         live = Live('./data/nomelt-model/live', dvcyaml=False, report='md')
-        trainer.add_callback(nomelt.dvclive.DVCLiveCallback(live=live))
+        trainer.add_callback(nomelt.dvclive.DVCLiveCallback(live=live, model_file='./data/nomelt-model/model'))
+    if params['training']['early_stopping']:
+        trainer.add_callback(transformers.EarlyStoppingCallback(
+            early_stopping_patience=params['training']['early_stopping_patience'],
+            early_stopping_threshold=params['training']['early_stopping_threshold'],))
     trainer.pop_callback(transformers.integrations.TensorBoardCallback)
     trainer.pop_callback(transformers.integrations.CodeCarbonCallback) 
+    trainer.accelerator.wait_for_everyone()
 
-    # compute initial scores
-    # initial_eval = trainer.evaluate(dataset['test'], metric_key_prefix='test')
-    # logger.info(f"Eval scores at begining of training: {initial_eval}")
-    # train
     result = trainer.train()
 
+    logger.info(f"Training result: {result}")
+    trainer.save_model()
     # compute final score
-    trainer.args.prediction_loss_only=False
-    final_eval = trainer.evaluate(dataset['test'], metric_key_prefix='test')
     if trainer.accelerator.is_main_process:
-        for key, value in final_eval.items():
-            live.log_metric(key, value)
-        trainer.save_model()
         live.end()
         tracker.stop()
 
