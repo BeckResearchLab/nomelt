@@ -13,6 +13,8 @@ import pyrosetta.distributed.io as io
 from pyrosetta.distributed.cluster import PyRosettaCluster
 import multiprocessing as mp
 
+pyrosetta.init()
+
 @dataclass
 class RosettaMinimizationParameters:
     """These default parmaeters are the ones used in the paper."""
@@ -27,7 +29,7 @@ def _minimize_structure(kwargs):
     import pyrosetta # Local import
     import pyrosetta.io as io # Local import
     from pyrosetta.rosetta.protocols.minimization_packing import MinMover
-    pyrosetta.init()
+    
     # Create a pose from the PDB file
     pose=io.pose_from_pdb(kwargs['pdb_file'])
     # Create a score function
@@ -37,6 +39,11 @@ def _minimize_structure(kwargs):
         scorefxn.set_weight(pyrosetta.core.scoring.constraints, 1.0)
     # Setup the MinMover
     min_mover = MinMover()
+    mm = pyrosetta.MoveMap()
+    mm.set_bb(True)
+    mm.set_chi(True)
+    mm.set_jump(True)
+    min_mover.movemap(mm)
     min_mover.score_function(scorefxn)
     min_mover.min_type(kwargs['min_type'])
     min_mover.tolerance(kwargs['tolerance'])

@@ -5,9 +5,12 @@ import logging
 from typing import Dict, List
 from dataclasses import dataclass, field
 import numpy as np
+import torch
+from tqdm import tqdm
 
 from nomelt.thermo_estimation.alphafold import run_alphafold, AlphaFoldParams
 from nomelt.thermo_estimation.rosetta import minimize_structures, RosettaMinimizationParameters
+import esm
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,7 +32,7 @@ class ThermoStabilityEstimator:
 @dataclass
 class mAFminDGArgs:
     af_models: list[int] = field(default_factory=lambda: [3, 4])
-    af_relaced: bool = Treue
+    af_relaced: bool = True
     af_params = AlphaFoldParams()
     rosetta_params = RosettaMinimizationParameters()
 
@@ -89,3 +92,62 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
         energies = self.compute_ensemble_energies(temp_dir)
         shutil.rmtree(temp_dir)
         return energies
+
+
+class ESMFoldDGArgs:
+    rosetta_params = RosettaMinimizationParameters()
+
+class ESMFoldDGEstimator(ThermoStabilityEstimator):
+    """Uses ESMfold to predict the structure of a protein and estimate its thermal stability."""
+    
+    def __init__(self, sequences: list[str], ids: list[str], args: ESMFoldDGArgs=ESMFoldDGArgs()):
+        super().__init__(sequences, ids)
+        self.args = args
+
+    def generate_esmfold_structures(self, temp_dir: str) -> Dict[str, str]:
+        """Predict protein structures using ESMfold and save them to PDB files in the temporary directory."""
+        
+        model = esm.pretrained.esmfold_v1()
+        model = model.eval().cuda()
+        
+        pdb_outputs = {}
+        self.pldtt = []
+        print(f'Running ESMfold in {len(self.sequences)} proteins.')
+        
+        with torch.no_grad():
+            for pos in tqdm(range(0, len(self.sequences), 4)):
+                batch_sequences = self.sequences[pos:pos + 4]
+                batch_ids = self.ids[pos:pos + 4]
+                
+                outputs = model.infer(batch_sequences)
+                self.pldtt.append(outputs["mean_plddt"].cpu().numpy())
+                
+                # Convert outputs to pdb and save them immediately for the current batch
+                batch_pdb_list = model.output_to_pdb(outputs)
+                for seq_id, pdb_data in zip(batch_ids, batch_pdb_list):
+                    pdb_filename = os.path.join(temp_dir, f"{seq_id}.pdb")
+                    with open(pdb_filename, "w") as f:
+                        f.write(pdb_data)
+                    pdb_outputs[seq_id] = pdb_filename
+    
+        del outputs
+        del model
+        torch.cuda.empty_cache()
+        
+        return pdb_outputs
+
+    def compute_structures_energies(self, pdb_files: List[str]) -> List[float]:
+        """Compute energies for a list of PDB files using Rosetta."""
+        return minimize_structures(pdb_files, self.args.rosetta_params)
+
+    def run(self) -> Dict[str, float]:
+        temp_dir = tempfile.mkdtemp(dir='./tmp/')
+
+        pdb_files_dict = self.generate_esmfold_structures(temp_dir)
+        self.pdb_files_dict = pdb_files_dict
+    
+        energies = self.compute_structures_energies(list(pdb_files_dict.values()))
+    
+        energy_outputs = dict(zip(pdb_files_dict.keys(), energies))
+
+        return energy_outputs
