@@ -14,11 +14,11 @@ dependencies:
   - python=3.9
   - pyyaml=6.0
   - scikit-learn
-  - tensorflow=2.11.0
+  - tensorflow
   - pytorch
   - pytorch-cuda=11.7
+  - pytorch-lightning=1.9
   - cudatoolkit-dev
-  - transformers>=4.30
   - evaluate
   - datasets
   - pip
@@ -26,6 +26,7 @@ dependencies:
     - duckdb==0.7.1
     - codecarbon==2.1.4
     - dvclive==2.12.1
+    - biopython
     - datasketch
     - accelerate
     - dpu_utils
@@ -33,7 +34,10 @@ dependencies:
     - git-lfs
     - sacrebleu
     - rouge_score
-    - fair-esm[esmfold]
+    - fair-esm @ git+https://github.com/facebookresearch/esm.git
+    - deepspeed==0.10.0
+    - transformers @ git+https://github.com/huggingface/transformers.git
     - dllogger @ git+https://github.com/NVIDIA/dllogger.git
-    - openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307
+    - openfold @ git+https://github.com/EvanKomp/openfold.git
+    - modelcif
 
