@@ -13,7 +13,9 @@ import pyrosetta.distributed.io as io
 from pyrosetta.distributed.cluster import PyRosettaCluster
 import multiprocessing as mp
 
-pyrosetta.init()
+import logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class RosettaMinimizationParameters:
@@ -23,12 +25,15 @@ class RosettaMinimizationParameters:
     tolerance: float = 0.001
     use_constraints: bool = False
     n_workers: int = 1
+    update_pdb: bool = False
 
 def _minimize_structure(kwargs):
     """Meant to be mapped my multiprocessing"""
     import pyrosetta # Local import
     import pyrosetta.io as io # Local import
     from pyrosetta.rosetta.protocols.minimization_packing import MinMover
+    if not pyrosetta.rosetta.basic.was_init_called():
+        pyrosetta.init()
     
     # Create a pose from the PDB file
     pose=io.pose_from_pdb(kwargs['pdb_file'])
@@ -53,6 +58,11 @@ def _minimize_structure(kwargs):
 
     # Calculate the approximated folding free energy
     folding_free_energy = scorefxn(pose)
+
+    if kwargs['update_pdb']:
+        logger.debug(f"Updated PDB file {kwargs['pdb_file']} with minimized positions")
+        pose.dump_pdb(kwargs['pdb_file'])
+    
     return folding_free_energy
 
 def minimize_structures(pdb_files: list[str], params: RosettaMinimizationParameters=RosettaMinimizationParameters()):
@@ -84,7 +94,8 @@ def minimize_structures(pdb_files: list[str], params: RosettaMinimizationParamet
             "scorefxn_name": params.scorefxn_name,
             "min_type": params.min_type,
             "tolerance": params.tolerance,
-            "use_constraints": params.use_constraints
+            "use_constraints": params.use_constraints,
+            "update_pdb": params.update_pdb
         }
 
     tasks = [create_kwargs(file) for file in pdb_files]

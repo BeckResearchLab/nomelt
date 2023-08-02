@@ -15,12 +15,15 @@ import esm
 import logging
 logger = logging.getLogger(__name__)
 
+ESMFOLD = esm.pretrained.esmfold_v1().eval()
+
 class ThermoStabilityEstimator:
     """Abstract parent class."""
     def __init__(self, sequences: list[str], ids: list[str], args=None):
         assert len(sequences) == len(ids)
         self.ids = ids
         self.sequences = sequences
+        self.args=args
 
     def run(self) -> Dict[str, float]:
         """Run the estimator on the specified sequences.
@@ -93,26 +96,32 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
         shutil.rmtree(temp_dir)
         return energies
 
-
+@dataclass
 class ESMFoldDGArgs:
-    rosetta_params = RosettaMinimizationParameters()
+    rosetta_params: RosettaMinimizationParameters = RosettaMinimizationParameters()
+    gpu_i: int = None
+    wdir: str = os.path.abspath('./tmp/ESMFoldDGEstimator_structures')
 
 class ESMFoldDGEstimator(ThermoStabilityEstimator):
     """Uses ESMfold to predict the structure of a protein and estimate its thermal stability."""
     
     def __init__(self, sequences: list[str], ids: list[str], args: ESMFoldDGArgs=ESMFoldDGArgs()):
-        super().__init__(sequences, ids)
-        self.args = args
+        super().__init__(sequences, ids, args=args)
 
     def generate_esmfold_structures(self, temp_dir: str) -> Dict[str, str]:
         """Predict protein structures using ESMfold and save them to PDB files in the temporary directory."""
+
+        if self.args.gpu_i is None:
+            device='cuda'
+        else:
+            device=f'cuda:{self.args.gpu_i}'
         
-        model = esm.pretrained.esmfold_v1()
-        model = model.eval().cuda()
+        model = ESMFOLD
+        model.to(device)
         
         pdb_outputs = {}
         self.pldtt = []
-        print(f'Running ESMfold in {len(self.sequences)} proteins.')
+        logger.info(f'Running ESMfold on {len(self.sequences)} proteins.')
         
         with torch.no_grad():
             for pos in tqdm(range(0, len(self.sequences), 4)):
@@ -131,7 +140,6 @@ class ESMFoldDGEstimator(ThermoStabilityEstimator):
                     pdb_outputs[seq_id] = pdb_filename
     
         del outputs
-        del model
         torch.cuda.empty_cache()
         
         return pdb_outputs
@@ -141,7 +149,9 @@ class ESMFoldDGEstimator(ThermoStabilityEstimator):
         return minimize_structures(pdb_files, self.args.rosetta_params)
 
     def run(self) -> Dict[str, float]:
-        temp_dir = tempfile.mkdtemp(dir='./tmp/')
+        temp_dir = self.args.wdir
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
 
         pdb_files_dict = self.generate_esmfold_structures(temp_dir)
         self.pdb_files_dict = pdb_files_dict

@@ -21,6 +21,8 @@ dependencies:
   - cudatoolkit-dev
   - evaluate
   - datasets
+  - clustalw
+  - mdanalysis
   - pip
   - pip:
     - duckdb==0.7.1
@@ -40,4 +42,6 @@ dependencies:
     - dllogger @ git+https://github.com/NVIDIA/dllogger.git
     - openfold @ git+https://github.com/EvanKomp/openfold.git
     - modelcif
+    - optuna
+    - pillow
 
