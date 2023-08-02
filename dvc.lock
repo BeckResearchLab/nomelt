@@ -42,36 +42,38 @@ stages:
     deps:
     - path: ./.config/accelerate/default_config.yaml
       hash: md5
-      md5: 1e211c635cfff9f43911e2f8c219f33c
-      size: 500
+      md5: d78cb00a386e0c5064e8a0eec14d6678
+      size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: 31c36ee4e28dd21c7e57b2d9e0eb1c9c.dir
-      size: 1899453186
+      md5: 6ea058879a12b471ded02fbd10b3fd9e.dir
+      size: 5906034844
       nfiles: 18
     - path: ./scripts/train.py
       hash: md5
-      md5: edec531219bc8cf6e674f805aadb9921
-      size: 10880
+      md5: cf8239e8d457e8111577e9ae4fc7fb16
+      size: 12135
     params:
       params.yaml:
         model.generation_max_length: 250
         model.model_hyperparams:
           dropout_rate: 0.1
-          relative_attention_max_distance: 128
+          relative_attention_max_distance: 250
         model.pretrained_model: Rostlab/prot_t5_xl_uniref50
         model.task: translation
+        training.additional_filters:
+        - abs({seq_len_diff})/{meso_seq_len} < 0.08
         training.auto_find_batch_size: false
         training.bf16: true
         training.dev_sample_data:
-        training.early_stopping: false
-        training.early_stopping_patience: 2
-        training.early_stopping_threshold: 1.0
-        training.epochs: 1
+        training.early_stopping: true
+        training.early_stopping_patience: 4
+        training.early_stopping_threshold: 0.1
+        training.epochs: 3
         training.fp16: false
         training.gradient_accumulation: 2
         training.gradient_checkpointing: true
-        training.keep_only_extremes: true
+        training.keep_only_extremes: false
         training.label_smoothing_factor: 0.0
         training.learning_rate: 0.0001
         training.lr_scheduler_type: linear
@@ -84,27 +86,27 @@ stages:
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: f79821b1810333c708f12c7b3203babc
-      size: 371
+      md5: 1bb360181f4f5e0953fb6f8162d3fba0
+      size: 393
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: b0deaf848368abeb1f50d536c3529f0e.dir
-      size: 7229
+      md5: 07939accc8b6d545c65f08f002780011.dir
+      size: 20617
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: fb97c57d6cbfd29f1bf99c9031807af4
+      md5: bad0a7484a13c623775ba37f6d6b032e
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: 99638ff9597d94f7ea5d1b11f4128933.dir
-      size: 253484
+      md5: f1a9db415ade823229fd35e866885965.dir
+      size: 231255
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: a0476578097042cedd68306c8fc239ec.dir
-      size: 794991579068
-      nfiles: 639
+      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
+      size: 321368839764
+      nfiles: 257
   score_model:
     cmd: python scripts/score_model.py
     deps:

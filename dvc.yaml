@@ -53,6 +53,7 @@ stages:
       - training.early_stopping
       - training.early_stopping_patience
       - training.early_stopping_threshold
+      - training.additional_filters
     outs:
       - ./data/nomelt-model/model/:
           persist: true
@@ -69,7 +70,7 @@ stages:
           cache: false
   score_model:
     wdir: ./
-    cmd: python scripts/score_model.py
+    cmd:  accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml scripts/score_model.py 
     deps:
       - ./scripts/score_model.py
       - ./data/nomelt-model/model/

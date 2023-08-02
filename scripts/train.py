@@ -43,6 +43,23 @@ def print_gpu_utilization(index):
     info = nvmlDeviceGetMemoryInfo(handle)
     print(f"GPU memory occupied: {info.used//1024**2} MB.")
 
+def get_custom_filter(filter_str):
+    """Convert a string into a callable thatr can be used to filter data
+    based on columns in the dataset.
+
+    Eg for input string 'status_in_cluster == "extreme"':
+    >>> filter = get_custom_filter('{status_in_cluster} == "extreme"')
+    >>> dataset = dataset.filter(filter)
+    """
+    def custom_callable(example):
+        # Extract the column names by using format-style string operations
+        condition = filter_str.format(**example)
+        
+        # Use eval to compute the result of the condition
+        return eval(condition)
+    
+    return custom_callable
+
 def main():
     # start logger
     logger.setLevel(getattr(logging, LOGLEVEL))
@@ -66,6 +83,7 @@ def main():
     # retry until successful
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
+    logger.info(f"Loaded params: {params}")
 
     # load tokenizer
     try:
@@ -81,17 +99,25 @@ def main():
             project_name="train",
             output_dir="./data/",
             country_iso_code="USA",
-            region="washington"
+            region="washington",
+            api_call_interval=20,
         )
         tracker.start()
 
     # Load and sample as necessary
     with accelerator.main_process_first():
         dataset = load_from_disk('./data/dataset/')
-        logger.info(f"Loaded dataset. Train, test size: {(len(dataset['train']), len(dataset['test']))}")
+        logger.info(f"Loaded dataset. Train, eval, test size: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
         if params['training']['keep_only_extremes']:
             dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique'])
             logger.info(f"Keeping only extreme cluster and unique sequences. New train, val, test size: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
+
+        # apply additional filters
+        if params['training']['additional_filters']:
+            for filter_str in params['training']['additional_filters']:
+                dataset = dataset.filter(get_custom_filter(filter_str))
+                logger.info(f"Applied additional filter {filter_str}. New train, val, test size: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
+
         if params['training']['dev_sample_data']:
             if len(dataset['train']) <= params['training']['dev_sample_data']:
                 pass
@@ -140,6 +166,8 @@ def main():
         print(initial_columns)
         logger.info(f"Tokenizing and preparing model inputs. Using task '{params['model']['task']}'. 'tranlsation' is meso to thermo, 'reconstruction' is meso to meso or thermo to thermo.")
         dataset = dataset.map(preprocess_dataset_to_model_inputs, batched=True, remove_columns=initial_columns, load_from_cache_file=True, desc='Tokenizing and preparing model inputs')
+        # remove the unnecessary columns
+        dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
 
         # compute number of steps per save and evalution
         if torch.cuda.is_available():
@@ -183,7 +211,7 @@ def main():
         prediction_loss_only=True,
         save_strategy=save_strat,
         save_steps=steps_per_save,
-        save_total_limit=20,
+        save_total_limit=8,
         logging_strategy='steps',
         logging_steps=1,
         predict_with_generate=False,
