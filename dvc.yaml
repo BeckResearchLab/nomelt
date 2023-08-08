@@ -68,18 +68,60 @@ stages:
     plots:
       - ./data/nomelt-model/live/static/:
           cache: false
-  score_model:
+  make_predictions:
     wdir: ./
-    cmd:  accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml scripts/score_model.py 
+    cmd:  accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml scripts/make_predictions.py 
     deps:
-      - ./scripts/score_model.py
+      - ./scripts/make_predictions.py
       - ./data/nomelt-model/model/
       - ./data/dataset/
     params:
       - model.generation_max_length
       - model.generation_num_beams
     outs:
-      - ./data/nomelt-model/test_metrics.yaml:
-          cache: false
+      - ./data/nomelt-model/predictions.tsv
+
+  score_predictions:
+    wdir: ./
+    cmd: python scripts/score_predictions.py
+    deps:
+      - ./scripts/score_predictions.py
+      - ./data/nomelt-model/predictions.tsv
+    outs:
+      - ./data/nomelt-model/test_scores.json
+  translate_enh1:
+    wdir: ./
+    cmd: python scripts/translate_enh1.py
+    deps:
+      - ./scripts/translate_enh1.py
+      - ./data/nomelt-model/model/
+    params:
+      - model.generation_max_length
+      - model.generation_num_beams
+    outs:
+      - ./data/enh/translate_enh1.json
+  optimize_enh1:
+    wdir: ./
+    cmd: python scripts/optimize_enh1.py
+    deps:
+      - ./scripts/optimize_enh1.py
+      - ./data/enh/translate_enh1.json
+    params:
+      - optimize.estimator
+      - optimize.n_trials
+      - optimize.direction
+      - optimize.sampler
+      - optimize.cut_tails
+      - optimize.gap_compressed_mutations
+      - optimize.matrix
+      - optimize.match_score
+      - optimize.mismatch_score
+      - optimize.gapopen
+      - optimize.gapextend
+      - optimize.penalize_end_gaps
+    outs:
+      - ./data/enh/optimize_enh1/
+      - ./data/enh/optimize_enh1_trials.csv
+      - ./data/enh/optimize_enh1_results.json
 
 

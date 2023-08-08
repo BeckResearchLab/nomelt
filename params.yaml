@@ -39,4 +39,21 @@ training:
     - 'abs({seq_len_diff})/{meso_seq_len} < 0.08'
   max_eval_examples: 10000    # only during training
   dev_sample_data: null
+optimize:
+  estimator: ESMFoldDGEstimator
+  estimator_args: null
+  n_trials: 100
+  direction: minimize  # or 'maximize'
+  sampler: NSGAIISampler
+  cut_tails: null # number of gap spaces to keep om ends of the alignment
+  gap_compressed_mutations: true # whether to consider a string of gaps a single mutation
+  matrix: BLOSUM62
+  match_score: 1
+  mismatch_score: -1
+  gapopen: -4
+  gapextend: -1
+  penalize_end_gaps: false
+  sampler_args:
+    population_size: 10
+
 

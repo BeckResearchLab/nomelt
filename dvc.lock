@@ -108,22 +108,23 @@ stages:
       size: 321368839764
       nfiles: 257
   score_model:
-    cmd: python scripts/score_model.py
+    cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
+      scripts/score_model.py
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 3b2846f7ef5623deb2bec6f59c0e4b98.dir
-      size: 1899476034
-      nfiles: 22
+      md5: 9b6a544fa719bcd32f7ec0be763937bb.dir
+      size: 833215556
+      nfiles: 13
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: a0476578097042cedd68306c8fc239ec.dir
-      size: 794991579068
-      nfiles: 639
+      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
+      size: 321368839764
+      nfiles: 257
     - path: ./scripts/score_model.py
       hash: md5
-      md5: e10253c7955b8ad00b1e5a8a44feee1e
-      size: 8314
+      md5: 0afcb186cf8d1c120771a301c6382041
+      size: 9346
     params:
       params.yaml:
         model.generation_max_length: 250
@@ -131,5 +132,108 @@ stages:
     outs:
     - path: ./data/nomelt-model/test_metrics.yaml
       hash: md5
-      md5: dc14b1596ef621c8418cd44fd2043338
-      size: 171
+      md5: 3696b43e94a05ae22e74272263269583
+      size: 225
+  make_predictions:
+    cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
+      scripts/make_predictions.py
+    deps:
+    - path: ./data/dataset/
+      hash: md5
+      md5: 61b486888c9596ee59cd58625ca98666.dir
+      size: 846265188
+      nfiles: 13
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
+      size: 321368839764
+      nfiles: 257
+    - path: ./scripts/make_predictions.py
+      hash: md5
+      md5: 98181c8b634254dffed362691be01db3
+      size: 9541
+    params:
+      params.yaml:
+        model.generation_max_length: 250
+        model.generation_num_beams: 10
+    outs:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: df3499c8038881bcfe0b44a8928ac98d
+      size: 3831638
+  score_predictions:
+    cmd: python scripts/score_predictions.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: df3499c8038881bcfe0b44a8928ac98d
+      size: 3831638
+    - path: ./scripts/score_predictions.py
+      hash: md5
+      md5: 72f8c9d08f4dc9af8ec10fb9c7843cec
+      size: 3799
+    outs:
+    - path: ./data/nomelt-model/test_scores.json
+      hash: md5
+      md5: b187d552e09de5b74389d538cc7a2b40
+      size: 278
+  translate_enh1:
+    cmd: python scripts/translate_enh1.py
+    deps:
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
+      size: 321368839764
+      nfiles: 257
+    - path: ./scripts/translate_enh1.py
+      hash: md5
+      md5: e0ea6b76312d218454c6cd09409cad1a
+      size: 1035
+    params:
+      params.yaml:
+        model.generation_max_length: 250
+        model.generation_num_beams: 10
+    outs:
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: 66613740686cb02983ea956f9498558c
+      size: 166
+  optimize_enh1:
+    cmd: python scripts/optimize_enh1.py
+    deps:
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: 66613740686cb02983ea956f9498558c
+      size: 166
+    - path: ./scripts/optimize_enh1.py
+      hash: md5
+      md5: 93a1320dce3e4f86b2a1f82bcf600377
+      size: 4336
+    params:
+      params.yaml:
+        optimize.cut_tails:
+        optimize.direction: minimize
+        optimize.estimator: ESMFoldDGEstimator
+        optimize.gap_compressed_mutations: true
+        optimize.gapextend: -1
+        optimize.gapopen: -4
+        optimize.match_score: 1
+        optimize.matrix: BLOSUM62
+        optimize.mismatch_score: -1
+        optimize.n_trials: 100
+        optimize.penalize_end_gaps: false
+        optimize.sampler: NSGAIISampler
+    outs:
+    - path: ./data/enh/optimize_enh1/
+      hash: md5
+      md5: 4e99caa42f94cae558692834f437de71.dir
+      size: 3758949
+      nfiles: 85
+    - path: ./data/enh/optimize_enh1_results.json
+      hash: md5
+      md5: 796d21ebc6f54cc11c16a333f9b00ef8
+      size: 22970
+    - path: ./data/enh/optimize_enh1_trials.csv
+      hash: md5
+      md5: 3c7b252c22c4b277e0d1d846f5a0cdee
+      size: 19347

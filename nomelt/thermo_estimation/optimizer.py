@@ -12,7 +12,7 @@ import torch
 import MDAnalysis.analysis.align
 import pandas as pd
 
-import nomelt.thermo_estimation.estimators
+import nomelt.thermo_estimation.estimator
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,7 +34,6 @@ class GpuQueue:
         yield current_idx
         self.queue.put(current_idx)
 
-
 @dataclass
 class Mutation:
     positions: Union[int, Tuple[int, int]] #if tuple, then it is multiple amino acids
@@ -55,20 +54,85 @@ class OptimizerArgs:
     gapopen: int = -2
     gapextend: int = -1
     penalize_end_gaps: bool = False
+    optuna_storage: str = f'sqlite:///{os.path.abspath("./tmp/optuna.db")}'
+    optuna_overwrite: bool = False
 
 class MutationSubsetOptimizer:
-    def __init__(self, wt: str, variant: str, estimator: nomelt.thermo_estimation.estimators.ThermoStabilityEstimator, name: str = None, args: OptimizerArgs = OptimizerArgs(), estimator_args=None):
+    """
+    An optimizer for subsets of mutations based on given wild type and variant sequences.
+
+    Params:
+    -----------
+    wt : str
+        The wild type sequence.
+    variant : str
+        The target variant sequence.
+    estimator : nomelt.thermo_estimation.estimator.ThermoStabilityEstimator
+        The estimator to predict thermodynamic stability of a given sequence.
+    name : str, optional
+        Name of the optimization run, default is "mutation_optimizer_run".
+    args : OptimizerArgs, optional
+        Arguments related to the optimization.
+    estimator_args : dict, optional
+        Arguments for the estimator.
+
+    Additional Attributes:
+    ----------------------
+    mutation_set : Dict[str, Mutation]
+        The set of mutations that are considered for optimization.
+    aligned_wt : str
+        The wild type sequence after alignment.
+    aligned_variant : str
+        The variant sequence after alignment.
+    initial_targets : Dict[str, float]
+        The initial targets for the wild type and variant sequences.
+    study : optuna.Study
+        The optuna study object after optimization.
+    best_mutations : List[str]:
+        Return a list of the best mutations making up the best variantfound during optimization.
+    best_sequence : str:
+        Return the sequence of the best variant found during optimization.
+    structure_seq_trajectory : -> List[Tuple[int, str, Any]]:
+        Return the trajectory of sequences and structures explored during optimization.
+    
+
+    Methods:
+    --------
+    run(n_jobs: int = 1) -> Tuple[Dict[str, Any], float, optuna.Study]:
+        Run the optimization process for a subset of mutations.
+
+    Notes:
+    ------
+    The optimizer uses a genetic algorithm approach (through Optuna) to identify the optimal 
+    set of mutations that maximize or minimize (based on provided direction) a given objective 
+    function which is usually related to protein thermodynamic stability.
+    
+    Dependencies:
+    -------------
+    - nomelt: Package for estimating thermodynamic stability.
+    - Bio.pairwise2: For pairwise sequence alignment.
+    - optuna: For optimization.
+    """
+    def __init__(self, wt: str, variant: str, estimator: nomelt.thermo_estimation.estimator.ThermoStabilityEstimator, name: str = None, wdir: str = './tmp/', args: OptimizerArgs = OptimizerArgs()):
         self.wt = wt
         self.variant = variant
         self.estimator = estimator
         self.params = args
-        self.estimator_args = {'args':estimator_args} if estimator_args else {}
         self.study=None
         if name is None:
             name = "mutation_optimizer_run"
         self.name = name
+        self.wdir = os.path.join(os.path.abspath(wdir), name)
+        self.estimator.args.wdir = self.wdir
         self._set_mutation_set()
         self._trial_seq_pdb = []
+        if args.optuna_overwrite and os.path.exists(self.params.optuna_storage[10:]):
+            logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage[10:]}")
+            os.remove(self.params.optuna_storage[10:])
+
+    def _init_estimator_call(self):
+        initial_targets = self.estimator.run([self.wt, self.variant], ['wt', 'variant'])
+        self.initial_targets = initial_targets
 
     def _set_mutation_set(self):
         if self.params.matrix is not None:
@@ -219,22 +283,20 @@ class MutationSubsetOptimizer:
                 variant[mutation.positions] = mutation.variant
         return self.clean_gaps("".join(variant))
 
-    def _call_estimator(self, mutation_subset: List[str], gpu_i: int=None) -> float:
+    def _call_estimator(self, mutation_subset: List[str], gpu_id: int=None) -> float:
         logger.debug(f"Calling estimator with mutation subset: {mutation_subset}")
         variant_sequence = self._get_variant_sequence(mutation_subset)
         logger.debug(f"Variant sequence: {variant_sequence}")
         sequences = [variant_sequence]
-        estimator = self.estimator(sequences, [self.hash_mutation_set(mutation_subset)], **self.estimator_args)
-        # override wome parameters
-        estimator.args.gpu_i = gpu_i
-        estimator.args.wdir = os.path.abspath(f'./tmp/{self.name}')
-        return estimator.run()[self.hash_mutation_set(mutation_subset)], variant_sequence, estimator.pdb_files_dict[self.hash_mutation_set(mutation_subset)]
+        result = self.estimator.run(sequences, [self.hash_mutation_set(mutation_subset)], gpu_id=gpu_id)
+        return result[self.hash_mutation_set(mutation_subset)], variant_sequence, self.estimator.pdb_files_history[self.hash_mutation_set(mutation_subset)]
 
     def run(self, n_jobs: int =1):
+        self._init_estimator_call()
         if self.params.direction == 'minimize':
-            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, study_name=self.name)
+            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
         elif self.params.direction == 'maximize':
-            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, direction='maximize', study_name=self.name)
+            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, direction='maximize', study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
         else:
             raise ValueError('Invalid direction for optimization. Please choose "minimize" or "maximize".')
         self.study=study
@@ -247,12 +309,26 @@ class MutationSubsetOptimizer:
             raise ValueError("Optimized sequence not yet determined, call `run`")
         else:
             return [k for k in self.mutation_set.keys() if self.study.best_params[k]]
+        
+    @property
+    def best_value(self):
+        if self.study is None:
+            raise ValueError("Optimized sequence not yet determined, call `run`")
+        else:
+            return self.study.best_value
 
     @property
-    def optimized_sequence(self):
+    def best_sequence(self):
         best_mutations = self.best_mutations
         best_variant = self._get_variant_sequence(best_mutations)
         return best_variant
+    
+    @property
+    def optimized_structure_file(self):
+        if len(self._trial_seq_pdb) == 0:
+            raise ValueError('Must run optimizer before a trajecotry of variants and structures will be produced.')
+        else:
+            return self._trial_seq_pdb[self.study.best_trial.number][2]
 
     @property
     def structure_seq_trajectory(self):
@@ -275,13 +351,13 @@ class OptunaObjective:
         self.opt = optimizer
 
     def __call__(self, trial: optuna.trial.Trial) -> float:
-        with self.gpu_queue.one_gpu_per_process() as gpu_i:
+        with self.gpu_queue.one_gpu_per_process() as gpu_id:
             selected_mutations = [
                 mutation_key for mutation_key, include in
                 ((mutation_key, trial.suggest_categorical(mutation_key, [True, False])) for mutation_key in self.opt.mutation_set.keys())
                 if include
             ]
-            result, variant, pdb_file = self.opt._call_estimator(selected_mutations, gpu_i=gpu_i)
+            result, variant, pdb_file = self.opt._call_estimator(selected_mutations, gpu_id=gpu_id)
             self.opt._trial_seq_pdb.append(
                 (trial.number, variant, pdb_file)
             )
@@ -411,7 +487,7 @@ class OptTrajSuperimposer:
                 png_files.append(outfile)
 
         # now run the script
-        result = subprocess.run(f"vmd -e {vmd_script_file}".split(), capture_output=True)
+        result = subprocess.run(f"vmd -e {vmd_script_file}".split())
         logger.info(result.stdout.decode('utf-8'))
         return png_files
     
@@ -460,7 +536,6 @@ class OptTrajSuperimposer:
                 return point, img_display
 
             ani = FuncAnimation(fig, update, frames=len(image_files), init_func=init, blit=True)
-
 
             # Save animation as gif
             writer = PillowWriter(fps=4)  # Change fps as needed
