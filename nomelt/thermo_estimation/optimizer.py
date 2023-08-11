@@ -11,6 +11,9 @@ from dataclasses import dataclass
 import torch
 import MDAnalysis.analysis.align
 import pandas as pd
+from dask.distributed import Client, wait
+from dask_cuda import LocalCUDACluster
+from joblib import parallel_backend
 
 import nomelt.thermo_estimation.estimator
 
@@ -42,7 +45,7 @@ class Mutation:
 
 @dataclass
 class OptimizerArgs:
-    n_trials: int = 100
+    n_trials: int = 10
     direction: str = 'minimize'  # or 'maximize'
     sampler: optuna.samplers.BaseSampler = optuna.samplers.TPESampler()
     pruner: optuna.pruners.BasePruner = optuna.pruners.MedianPruner()
@@ -56,6 +59,7 @@ class OptimizerArgs:
     penalize_end_gaps: bool = False
     optuna_storage: str = f'sqlite:///{os.path.abspath("./tmp/optuna.db")}'
     optuna_overwrite: bool = False
+    cpu_per_gpu: int = 4
 
 class MutationSubsetOptimizer:
     """
@@ -126,6 +130,7 @@ class MutationSubsetOptimizer:
         self.estimator.args.wdir = self.wdir
         self._set_mutation_set()
         self._trial_seq_pdb = []
+        self.results = {}
         if args.optuna_overwrite and os.path.exists(self.params.optuna_storage[10:]):
             logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage[10:]}")
             os.remove(self.params.optuna_storage[10:])
@@ -133,6 +138,7 @@ class MutationSubsetOptimizer:
     def _init_estimator_call(self):
         initial_targets = self.estimator.run([self.wt, self.variant], ['wt', 'variant'])
         self.initial_targets = initial_targets
+        logger.info(f"Initial targets: {initial_targets}")
 
     def _set_mutation_set(self):
         if self.params.matrix is not None:
@@ -293,14 +299,14 @@ class MutationSubsetOptimizer:
 
     def run(self, n_jobs: int =1):
         self._init_estimator_call()
-        if self.params.direction == 'minimize':
-            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
-        elif self.params.direction == 'maximize':
-            study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, direction='maximize', study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
-        else:
-            raise ValueError('Invalid direction for optimization. Please choose "minimize" or "maximize".')
+        study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, direction=self.params.direction, study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
         self.study=study
-        study.optimize(OptunaObjective(self, GpuQueue()), n_trials=self.params.n_trials, n_jobs=n_jobs, show_progress_bar=True)
+        # run the optimization in parallel
+        cluster = LocalCUDACluster(n_workers=n_jobs, threads_per_worker=self.params.cpu_per_gpu)
+        client = Client(cluster)
+        gpu_queue = GpuQueue()
+        with parallel_backend('dask', n_jobs=n_jobs):
+            study.optimize(OptunaObjective(self, gpu_queue), n_trials=self.params.n_trials, n_jobs=n_jobs, show_progress_bar=True)
         return study.best_params, study.best_value, study
 
     @property
@@ -358,6 +364,12 @@ class OptunaObjective:
                 if include
             ]
             result, variant, pdb_file = self.opt._call_estimator(selected_mutations, gpu_id=gpu_id)
+            # store the result
+            self.opt.results[trial.number] = result
+            # check if the result is a single number. If not, assume the target is the first number
+            if not isinstance(result, (int, float)):
+                result = float(result[0])
+
             self.opt._trial_seq_pdb.append(
                 (trial.number, variant, pdb_file)
             )
