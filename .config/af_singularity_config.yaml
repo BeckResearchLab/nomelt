@@ -1,0 +1,7 @@
+# config for AlphaFoldArgs class
+data_dir: /mmfs1/gscratch/cheme/usr/evankomp/af_reduced_dbs
+db_preset: reduced_dbs
+use_precomputed_msas: true
+base_executable_path: /mmfs1/sw/contrib/escience-src/alphafold/2.3.0/run_singularity.py
+model_preset: model_4
+models_to_relax: none
