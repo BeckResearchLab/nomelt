@@ -1,6 +1,7 @@
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, T5Tokenizer, AutoConfig
 import re
+import numpy as np
 
 def prepare_model_and_tokenizer(model_path, model_hyperparams=None):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -26,14 +27,25 @@ def prepare_string(string):
     out = re.sub(r"[UZOB]", "X", out)
     return out
 
+def _decode_tensor(tensor, tokenizer):
+    output_tensor = torch.where(tensor != -100, tensor, tokenizer.pad_token_id)
+    generated_sequences = tokenizer.batch_decode(output_tensor, skip_special_tokens=True)
+    translated_sequences = [''.join(generated_sequence.split()) for generated_sequence in generated_sequences]
+    return np.array(translated_sequences).reshape(-1,1)
+
 def translate_sequences(
-        sequences, 
-        model_path,
-        model_hyperparams: dict=None,
-        generation_max_length: int=250,
-        generation_num_beams: int=10
-    ):
-    
+    sequences, 
+    model_path,
+    model_hyperparams: dict=None,
+    generation_max_length: int=250,
+    generation_num_beams: int=10,
+    generation_ensemble_size: int=None,
+    temperature: float=1.0,
+):
+    if generation_ensemble_size is not None:
+        assert generation_ensemble_size > 1, "generation_ensemble_size must be greater than 1"
+        assert generation_num_beams is None, "generation_num_beams must be None if generation_ensemble_size is not None"
+
     model, tokenizer = prepare_model_and_tokenizer(model_path, model_hyperparams)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -42,11 +54,18 @@ def translate_sequences(
     input_tensor = tokenizer(sequences, padding=True, return_tensors="pt").to(device)
 
     with torch.no_grad():
-        output_tensor = model.generate(**input_tensor, max_length=generation_max_length, num_beams=generation_num_beams)
+        if generation_ensemble_size is None:
+            output_tensor = model.generate(**input_tensor, max_length=generation_max_length, num_beams=generation_num_beams)
+        else:
+            output_tensor = model.generate(
+                **input_tensor,
+                max_length=generation_max_length,
+                num_beams=1,
+                temperature=temperature,
+                num_return_sequences=generation_ensemble_size
+            )
+        translated_sequences = _decode_tensor(output_tensor, tokenizer)
 
-    output_tensor = torch.where(output_tensor != -100, output_tensor, tokenizer.pad_token_id)
-    generated_sequences = tokenizer.batch_decode(output_tensor, skip_special_tokens=True)
-    translated_sequences = [''.join(generated_sequence.split()) for generated_sequence in generated_sequences]
     del output_tensor
     del model
     torch.cuda.empty_cache()

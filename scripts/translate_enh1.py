@@ -18,10 +18,10 @@ def main(sequence):
     return generated_sequences[0]
 
 if __name__ == "__main__":
-    ENH1 = "RPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKI"
+    ENH1 = "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK"
     if not os.path.exists('./data/enh'):
         os.makedirs('./data/enh', exist_ok=True)
-    generated_sequence = main(ENH1)
+    generated_sequence = main(ENH1)[0]
     outs = {
         'original': ENH1,
         'generated': generated_sequence,

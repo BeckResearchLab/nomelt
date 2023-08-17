@@ -1,6 +1,4 @@
 import os
-import shutil
-import tempfile
 import copy
 import logging
 from typing import Dict, List
@@ -16,7 +14,6 @@ import esm
 import logging
 logger = logging.getLogger(__name__)
 
-ESMFOLD = esm.pretrained.esmfold_v1().eval()
 
 @dataclass
 class ESMFoldDGArgs:
@@ -47,18 +44,23 @@ class ESMFoldDGEstimator(ThermoStabilityEstimator):
 
     def generate_esmfold_structures(self, temp_dir: str, sequences: list[str], ids: list[str], gpu_id: int=None) -> Dict[str, str]:
         """Predict protein structures using ESMfold and save them to PDB files in the temporary directory."""
+        # global ESMFOLD
+        # if ESMFOLD is None:
+        #     ESMFOLD = esm.pretrained.esmfold_v1().eval()
 
         if gpu_id is None:
             device='cuda'
         else:
             device=f'cuda:{gpu_id}'
 
-        if gpu_id in self._gpus_used:
-            local_model = self._gpus_used[gpu_id]
-        else:
-            local_model = copy.deepcopy(ESMFOLD)
-            local_model.to(device)
-            self._gpus_used[gpu_id] = local_model
+        # if gpu_id in self._gpus_used:
+        #     local_model = self._gpus_used[gpu_id]
+        # else:
+            # local_model = copy.deepcopy(ESMFOLD)
+            # local_model.to(device)
+            # self._gpus_used[gpu_id] = local_model
+
+        local_model = esm.pretrained.esmfold_v1().eval()
         
         pdb_outputs = {}
         self.pldtt = []

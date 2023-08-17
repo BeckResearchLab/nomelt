@@ -6,10 +6,17 @@ Designing high temperature protein sequences via learned language processing
 TODO
 conda installs
 rosetta install seperate
+af install seperate
+haddock install seperate
+
 
 ## Config
 
 Accelerate config
+
+## ENV variables
+`TMP`
+`AF_APPTAINER_SCRIPT`
 
 ## Models
 `nomelt` models are all designed to produce amino acid sequences of proteins stable at high temperature, conditioned on an input

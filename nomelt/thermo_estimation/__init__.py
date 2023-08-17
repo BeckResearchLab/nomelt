@@ -1,2 +1,2 @@
-from .alphafold import mAFminDGEstimator, mAFminDGArgs, AlphaFoldParams
+from .alphafold import mAFminDGEstimator, mAFminDGArgs, AlphaFoldArgs
 from .esmfold import ESMFoldDGEstimator, ESMFoldDGArgs

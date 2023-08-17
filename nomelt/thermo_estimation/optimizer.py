@@ -1,41 +1,27 @@
+from dask.distributed import wait, Client
+
 import os
+import time
 from contextlib import contextmanager
-import multiprocessing
 import subprocess
 import optuna
+from optuna.pruners import BasePruner
+from optuna.storages import JournalStorage, JournalFileStorage
 import Bio.pairwise2
 from Bio.Align import substitution_matrices
 from typing import List, Dict, Tuple
-from functools import partial
 from dataclasses import dataclass
-import torch
+import numpy as np
 import MDAnalysis.analysis.align
 import pandas as pd
-from dask.distributed import Client, wait
-from dask_cuda import LocalCUDACluster
-from joblib import parallel_backend
 
 import nomelt.thermo_estimation.estimator
 
 import logging
 logger = logging.getLogger(__name__)
+optuna.logging.enable_propagation()
 
 from typing import Union
-
-N_GPUS = torch.cuda.device_count()
-
-class GpuQueue:
-    def __init__(self):
-        self.queue = multiprocessing.Manager().Queue()
-        all_idxs = list(range(N_GPUS)) if N_GPUS > 0 else [None]
-        for idx in all_idxs:
-            self.queue.put(idx)
-
-    @contextmanager
-    def one_gpu_per_process(self):
-        current_idx = self.queue.get()
-        yield current_idx
-        self.queue.put(current_idx)
 
 @dataclass
 class Mutation:
@@ -48,7 +34,7 @@ class OptimizerArgs:
     n_trials: int = 10
     direction: str = 'minimize'  # or 'maximize'
     sampler: optuna.samplers.BaseSampler = optuna.samplers.TPESampler()
-    pruner: optuna.pruners.BasePruner = optuna.pruners.MedianPruner()
+    measure_initial_structures: bool = True
     cut_tails: Union[None, int] = None # number of gap spaces to keep om ends of the alignment
     gap_compressed_mutations: bool = False # whether to consider a string of gaps a single mutation
     matrix: str = None
@@ -57,9 +43,8 @@ class OptimizerArgs:
     gapopen: int = -2
     gapextend: int = -1
     penalize_end_gaps: bool = False
-    optuna_storage: str = f'sqlite:///{os.path.abspath("./tmp/optuna.db")}'
+    optuna_storage: str = f'{os.path.abspath("./tmp/optuna.log")}'
     optuna_overwrite: bool = False
-    cpu_per_gpu: int = 4
 
 class MutationSubsetOptimizer:
     """
@@ -96,8 +81,6 @@ class MutationSubsetOptimizer:
         Return a list of the best mutations making up the best variantfound during optimization.
     best_sequence : str:
         Return the sequence of the best variant found during optimization.
-    structure_seq_trajectory : -> List[Tuple[int, str, Any]]:
-        Return the trajectory of sequences and structures explored during optimization.
     
 
     Methods:
@@ -129,13 +112,13 @@ class MutationSubsetOptimizer:
         self.wdir = os.path.join(os.path.abspath(wdir), name)
         self.estimator.args.wdir = self.wdir
         self._set_mutation_set()
-        self._trial_seq_pdb = []
-        self.results = {}
+
         if args.optuna_overwrite and os.path.exists(self.params.optuna_storage[10:]):
             logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage[10:]}")
             os.remove(self.params.optuna_storage[10:])
 
     def _init_estimator_call(self):
+        logger.info("Running initial estimator call")
         initial_targets = self.estimator.run([self.wt, self.variant], ['wt', 'variant'])
         self.initial_targets = initial_targets
         logger.info(f"Initial targets: {initial_targets}")
@@ -297,16 +280,51 @@ class MutationSubsetOptimizer:
         result = self.estimator.run(sequences, [self.hash_mutation_set(mutation_subset)], gpu_id=gpu_id)
         return result[self.hash_mutation_set(mutation_subset)], variant_sequence, self.estimator.pdb_files_history[self.hash_mutation_set(mutation_subset)]
 
-    def run(self, n_jobs: int =1):
-        self._init_estimator_call()
-        study = optuna.create_study(sampler=self.params.sampler, pruner=self.params.pruner, direction=self.params.direction, study_name=self.name, storage=self.params.optuna_storage, load_if_exists=True)
+    def _get_storage(self):
+        storage = JournalStorage(JournalFileStorage(self.params.optuna_storage))
+        return storage
+
+    def run(self, n_jobs: int=1, client: Client=None):
+        """Run the optimization.
+        
+        Uses parallel workers if n_jobs > 1 and a dask.distributed.Client object is provided.
+        """
+        if self.params.measure_initial_structures:
+            self._init_estimator_call()
+        else:
+            pass
+
+        # load the study
+        storage = self._get_storage()
+        study = optuna.create_study(direction=self.params.direction, study_name=self.name, storage=storage, load_if_exists=True)
+        # if we are resuming, we need to clean up trials that were cut while running
+        # this is because the pruner will skip running trials, but these ones are not actually running still
+        if len(study.trials) > 0:
+            logger.info(f"Loading study with {len(study.trials)} trials. Cleaning up incompletes.")
+            good_trials = []
+            for trial in study.trials:
+                if trial.state == optuna.trial.TrialState.COMPLETE:
+                    good_trials.append(trial)
+            # overwrite with new study and give it the complete trials
+            optuna.delete_study(study_name=self.name, storage=storage)
+            study = optuna.create_study(direction=self.params.direction, study_name=self.name, storage=storage, load_if_exists=False)
+            for trial in good_trials:
+                study.add_trial(trial)
+            logger.info(f"Cleaned up incomplete trials. New study has {len(study.trials)} trials.")
+        else:
+            logger.info(f"Starting new study.")
+
         self.study=study
-        # run the optimization in parallel
-        cluster = LocalCUDACluster(n_workers=n_jobs, threads_per_worker=self.params.cpu_per_gpu)
-        client = Client(cluster)
-        gpu_queue = GpuQueue()
-        with parallel_backend('dask', n_jobs=n_jobs):
-            study.optimize(OptunaObjective(self, gpu_queue), n_trials=self.params.n_trials, n_jobs=n_jobs, show_progress_bar=True)
+        args = (OptunaObjective(self), self.params.n_trials, self.params.sampler, self.name, storage)
+        if n_jobs == 1:
+            _worker_optimize(*args)
+        else:
+            assert client is not None, "Must provide a dask.distributed.Client object if n_jobs > 1"
+
+            # map to the client
+            futures = [client.submit(_worker_optimize, *args) for _ in range(n_jobs)]
+            wait(futures)
+        logger.info(f"Finished optimization. Best value: {study.best_value}, best params: {study.best_params}")
         return study.best_params, study.best_value, study
 
     @property
@@ -317,31 +335,11 @@ class MutationSubsetOptimizer:
             return [k for k in self.mutation_set.keys() if self.study.best_params[k]]
         
     @property
-    def best_value(self):
+    def best_trial(self):
         if self.study is None:
             raise ValueError("Optimized sequence not yet determined, call `run`")
         else:
-            return self.study.best_value
-
-    @property
-    def best_sequence(self):
-        best_mutations = self.best_mutations
-        best_variant = self._get_variant_sequence(best_mutations)
-        return best_variant
-    
-    @property
-    def optimized_structure_file(self):
-        if len(self._trial_seq_pdb) == 0:
-            raise ValueError('Must run optimizer before a trajecotry of variants and structures will be produced.')
-        else:
-            return self._trial_seq_pdb[self.study.best_trial.number][2]
-
-    @property
-    def structure_seq_trajectory(self):
-        if len(self._trial_seq_pdb) == 0:
-            raise ValueError('Must run optimizer before a trajecotry of variants and structures will be produced.')
-        else:
-            return self._trial_seq_pdb
+            return self.study.best_trial
     
     @staticmethod
     def clean_gaps(sequence: str) -> str:
@@ -351,29 +349,63 @@ class MutationSubsetOptimizer:
     def hash_mutation_set(mutation_set: List[str]) -> str:
         return hash("_".join(sorted(mutation_set)))
 
+class RepeatPruner(BasePruner):
+    def prune(self, study, trial):
+        # type: (Study, FrozenTrial) -> bool
+
+        trials = study.get_trials(deepcopy=False)
+        
+        numbers=np.array([t.number for t in trials])
+        bool_params= np.array([trial.params==t.params for t in trials]).astype(bool)
+        bool_in_play = np.array(
+            [t.state==optuna.trial.TrialState.COMPLETE or t.state==optuna.trial.TrialState.RUNNING for t in trials]).astype(bool)
+        bool_should_prune = np.logical_and(bool_params, bool_in_play)
+        #Don´t evaluate function if another with same params has been/is being evaluated before this one
+        if np.sum(bool_should_prune)>1:
+            if trial.number>np.min(numbers[bool_should_prune]):
+                return True
+        return False
+
 class OptunaObjective:
-    def __init__(self, optimizer: MutationSubsetOptimizer, gpu_queue: GpuQueue):
-        self.gpu_queue = gpu_queue
+    def __init__(self, optimizer: MutationSubsetOptimizer):
         self.opt = optimizer
 
     def __call__(self, trial: optuna.trial.Trial) -> float:
-        with self.gpu_queue.one_gpu_per_process() as gpu_id:
-            selected_mutations = [
-                mutation_key for mutation_key, include in
-                ((mutation_key, trial.suggest_categorical(mutation_key, [True, False])) for mutation_key in self.opt.mutation_set.keys())
-                if include
-            ]
-            result, variant, pdb_file = self.opt._call_estimator(selected_mutations, gpu_id=gpu_id)
-            # store the result
-            self.opt.results[trial.number] = result
-            # check if the result is a single number. If not, assume the target is the first number
-            if not isinstance(result, (int, float)):
-                result = float(result[0])
-
-            self.opt._trial_seq_pdb.append(
-                (trial.number, variant, pdb_file)
-            )
+        time.sleep(np.random.uniform()*10.0)  
+        selected_mutations = [
+            mutation_key for mutation_key, include in
+            ((mutation_key, trial.suggest_categorical(mutation_key, [True, False])) for mutation_key in self.opt.mutation_set.keys())
+            if include
+        ]
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+        result, variant, pdb_file = self.opt._call_estimator(selected_mutations)
+        # store the result
+        trial.set_user_attr("raw_result", result)
+        # check if the result is a single number. If not, assume the target is the first number
+        if not isinstance(result, (int, float)):
+            result = float(result[0])
+        # store the variant sequence
+        trial.set_user_attr("variant_seq", variant)
+        # store the pdb file
+        trial.set_user_attr("pdb_file", pdb_file)
+            
         return result  # Optuna minimizes by default, so return negative result to maximize
+
+def _worker_optimize(objective, n_trials, sampler, study_name, storage):
+    study = optuna.load_study(
+        sampler=sampler,
+        pruner=RepeatPruner(),
+        study_name=study_name,
+        storage=storage)
+    while True:
+        complete_trials = len(set(str(t.params) for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE))
+        if complete_trials < n_trials:
+            logger.info(f"Found {complete_trials} trials complete out of {n_trials} total. Running a trial")
+            study.optimize(objective, n_trials=1)
+        else:
+            break
+    logger.info(f"No more trials to run. Found {complete_trials} trials complete out of {n_trials} total.")
 
 
 class OptTrajSuperimposer:
@@ -413,11 +445,6 @@ class OptTrajSuperimposer:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
         self.output_files = None
-
-    @staticmethod
-    def _get_sorted_opt_traj(optimizer):
-        _, sequences, pdb_files = zip(*sorted(optimizer.structure_seq_trajectory, key=lambda x: x[0]))
-        return sequences, pdb_files
     
     def _parse_universes(self):
         self.universes = []

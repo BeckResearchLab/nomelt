@@ -187,8 +187,8 @@ stages:
       nfiles: 257
     - path: ./scripts/translate_enh1.py
       hash: md5
-      md5: e0ea6b76312d218454c6cd09409cad1a
-      size: 1035
+      md5: 5487731ffece44c0934159eec79f3815
+      size: 1042
     params:
       params.yaml:
         model.generation_max_length: 250
@@ -196,8 +196,8 @@ stages:
     outs:
     - path: ./data/enh/translate_enh1.json
       hash: md5
-      md5: 66613740686cb02983ea956f9498558c
-      size: 166
+      md5: 2b118641cd5582bfa16d743563357612
+      size: 170
   optimize_enh1:
     cmd: python scripts/optimize_enh1.py
     deps:
@@ -237,3 +237,36 @@ stages:
       hash: md5
       md5: 3c7b252c22c4b277e0d1d846f5a0cdee
       size: 19347
+  estimate_trans_energy_enh1:
+    cmd: python scripts/estimate_trans_energy_enh1.py
+    deps:
+    - path: ./.config/af_singularity_config.yaml
+      hash: md5
+      md5: 54b4d2b353c97261fdc4a16dce408154
+      size: 276
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: 2b118641cd5582bfa16d743563357612
+      size: 170
+    - path: scripts/estimate_trans_energy_enh1.py
+      hash: md5
+      md5: 26e8c5a3dab1ed6d27e390492d907fdd
+      size: 1353
+    params:
+      params.yaml:
+        optimize.estimator: mAFminDGEstimator
+        optimize.estimator_args:
+          af_params: ./.config/af_singularity_config.yaml
+          use_relaxed: false
+          num_replicates: 25
+          fix_msas: true
+    outs:
+    - path: ./data/enh/initial_estimate/
+      hash: md5
+      md5: 5767fecc932956fc42a4c331efb08850.dir
+      size: 15859178
+      nfiles: 64
+    - path: ./data/enh/translated_energy_enh1.json
+      hash: md5
+      md5: ee2dd680f51412bdba441ba2ae74d09b
+      size: 52

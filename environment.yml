@@ -44,4 +44,6 @@ dependencies:
     - modelcif
     - optuna
     - pillow
+    - dask
+    - dask-cuda
 
