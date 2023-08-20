@@ -4,9 +4,12 @@ import os
 import json
 from yaml import safe_load
 import optuna.samplers
+from dask_cuda import LocalCUDACluster
+from dask.distributed import Client
+import codecarbon
 import torch
 
-from nomelt.thermo_estimation.optimizer import MutationSubsetOptimizer, OptimizerArgs, OptTrajSuperimposer
+from nomelt.thermo_estimation.optimizer import MutationSubsetOptimizer, OptimizerArgs
 import nomelt.thermo_estimation
 from nomelt.thermo_estimation.rosetta import RosettaMinimizationParameters
 
@@ -20,8 +23,6 @@ else:
 LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
-N_GPUS = torch.cuda.device_count()
-
 def main():
     # start logger
     logger.setLevel(getattr(logging, LOGLEVEL))
@@ -33,18 +34,26 @@ def main():
     utils_logger.setLevel(getattr(logging, LOGLEVEL))
     utils_logger.addHandler(fh)
 
+    tracker = codecarbon.OfflineEmissionsTracker(
+        project_name="enh1_translate_optimize",
+        output_dir="./data/",
+        country_iso_code="USA",
+        region="washington"
+    )
+    tracker.start()
+
+    # start a dask cluster
+    N_GPUS = torch.cuda.device_count()
+    cluster = LocalCUDACluster(n_workers=N_GPUS, threads_per_worker=1)
+    client = Client(cluster)
+    logger.info(f"Starting cluster with config: {cluster.__dict__}")
+
     # load the parameters from file
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
 
-    # load the translated ENH1 sequence
-    with open('./data/enh/translate_enh1.json', 'r') as f:
-        _ = json.load(f)
-        enh1_seq = _['original']
-        translated_seq = _['generated']
-
-    if not os.path.exists('./data/enh/optimize_enh1'):
-        os.makedirs('./data/enh/optimize_enh1')
+    if not os.path.exists('./data/enh/optimize_enh1/'):
+        os.makedirs('./data/enh/optimize_enh1/')
     
     # get estimator class
     estimator_class = getattr(nomelt.thermo_estimation, params['optimize']['estimator'])
@@ -57,6 +66,7 @@ def main():
     else:
         estimator_args = estimator_args_class()
     estimator = estimator_class(args=estimator_args)
+    logger.info(f"Using estimator {estimator_class.__name__} with args {estimator_args}.")
 
     # set up the optimizer
     optimizer_args = OptimizerArgs(
@@ -71,37 +81,39 @@ def main():
         match_score=params['optimize']['match_score'],
         mismatch_score=params['optimize']['mismatch_score'],
         penalize_end_gaps=params['optimize']['penalize_end_gaps'],
-        optuna_storage='sqlite:///./data/enh/optimize_enh1/optuna.db',
+        optuna_storage='./data/enh/optimize_enh1/optuna.log',
+        optuna_overwrite=params['optimize']['optuna_overwrite'],
+        measure_initial_structures=False
     )
+    logger.info(f"Optimizer args: {optimizer_args}")
+
+    # get the translated sequence
+    with open('./data/enh/translate_enh1.json', 'r') as f:
+        _ = json.load(f)
+        trans_seq = _['generated']
+
     optimizer = MutationSubsetOptimizer(
-        enh1_seq,
-        translated_seq,
+        "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK",
+        trans_seq,
         args=optimizer_args,
-        name='optimize_enh1',
-        wdir='./data/enh/',
+        name='enh_vs_translate',
+        wdir='./data/enh/optimize_enh1/',
         estimator=estimator)
     
     # run the optimization
-    optimizer.run(n_jobs=N_GPUS)
-    logger.info(f"Ran optimizer with best score {optimizer.best_value} and best sequence {optimizer.best_sequence}.")
+    optimizer.run(n_jobs=N_GPUS, client=client)
+    logger.info(f"Ran optimizer with best trial {optimizer.best_trial}.")
     # save the results
     outs = {
-        'best_score': optimizer.best_value,
-        'best_sequence': optimizer.best_sequence,
-        'best_structure': optimizer.optimized_structure_file,
-        'wt': optimizer.wt,
-        'wt_score': optimizer.initial_targets['wt'],
-        'wt_structure': os.path.abspath(f'./tmp/{optimizer.name}/wt.pdb'),
-        'translation': optimizer.variant,
-        'translation_score': optimizer.initial_targets['variant'],
-        'translation_structure': os.path.abspath(f'./tmp/{optimizer.name}/variant.pdb'),
-        'trajectory': optimizer.structure_seq_trajectory
+        'best_score': optimizer.best_trial.value,
+        'best_sequence': optimizer.best_trial.user_attrs['variant_seq'],
+        'best_structure': optimizer.best_trial.user_attrs['pdb_file'],
     }
     with open(f'./data/enh/optimize_enh1_results.json', 'w') as f:
         json.dump(outs, f, indent=4)
     optimizer.study.trials_dataframe().to_csv(f'./data/enh/optimize_enh1_trials.csv')
-    logger.info(f"Saved results to ./data/enh/optimize_enh1_results.json and ./data/enh/optimize_enh1_trials.csv.")
-    # make a movie of the optimization
+    logger.info("Saved results.")
+    tracker.stop()
 
 if __name__ == "__main__":
     main()

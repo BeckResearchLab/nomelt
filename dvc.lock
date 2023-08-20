@@ -46,9 +46,9 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: 6ea058879a12b471ded02fbd10b3fd9e.dir
-      size: 5906034844
-      nfiles: 18
+      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
+      size: 829652740
+      nfiles: 11
     - path: ./scripts/train.py
       hash: md5
       md5: cf8239e8d457e8111577e9ae4fc7fb16
@@ -140,9 +140,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 61b486888c9596ee59cd58625ca98666.dir
-      size: 846265188
-      nfiles: 13
+      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
+      size: 829652740
+      nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -203,17 +203,22 @@ stages:
     deps:
     - path: ./data/enh/translate_enh1.json
       hash: md5
-      md5: 66613740686cb02983ea956f9498558c
-      size: 166
+      md5: 2b118641cd5582bfa16d743563357612
+      size: 170
     - path: ./scripts/optimize_enh1.py
       hash: md5
-      md5: 93a1320dce3e4f86b2a1f82bcf600377
-      size: 4336
+      md5: 958cf20a9933f0b96e9bf0f35724bd49
+      size: 4583
     params:
       params.yaml:
         optimize.cut_tails:
         optimize.direction: minimize
-        optimize.estimator: ESMFoldDGEstimator
+        optimize.estimator: mAFminDGEstimator
+        optimize.estimator_args:
+          af_params: ./.config/af_singularity_config.yaml
+          use_relaxed: false
+          num_replicates: 25
+          fix_msas: true
         optimize.gap_compressed_mutations: true
         optimize.gapextend: -1
         optimize.gapopen: -4
@@ -221,29 +226,32 @@ stages:
         optimize.matrix: BLOSUM62
         optimize.mismatch_score: -1
         optimize.n_trials: 100
+        optimize.optuna_overwrite: false
         optimize.penalize_end_gaps: false
         optimize.sampler: NSGAIISampler
+        optimize.sampler_args:
+          population_size: 10
     outs:
     - path: ./data/enh/optimize_enh1/
       hash: md5
-      md5: 4e99caa42f94cae558692834f437de71.dir
-      size: 3758949
-      nfiles: 85
+      md5: 6a3220fc3db71ce369e7106b1b45da35.dir
+      size: 1695734580
+      nfiles: 4457
     - path: ./data/enh/optimize_enh1_results.json
       hash: md5
-      md5: 796d21ebc6f54cc11c16a333f9b00ef8
-      size: 22970
+      md5: 24bca24b9cca3b8ce6d5a469a733b73d
+      size: 260
     - path: ./data/enh/optimize_enh1_trials.csv
       hash: md5
-      md5: 3c7b252c22c4b277e0d1d846f5a0cdee
-      size: 19347
+      md5: 450847a9ac0eb592b9a3f145e48cfab5
+      size: 157505
   estimate_trans_energy_enh1:
     cmd: python scripts/estimate_trans_energy_enh1.py
     deps:
     - path: ./.config/af_singularity_config.yaml
       hash: md5
-      md5: 54b4d2b353c97261fdc4a16dce408154
-      size: 276
+      md5: 6ff0e462bb3c6efc4c9b314193e06468
+      size: 275
     - path: ./data/enh/translate_enh1.json
       hash: md5
       md5: 2b118641cd5582bfa16d743563357612

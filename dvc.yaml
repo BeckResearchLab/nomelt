@@ -137,7 +137,8 @@ stages:
       - optimize.sampler_args
       - optimize.optuna_overwrite
     outs:
-      - ./data/enh/optimize_enh1/
+      - ./data/enh/optimize_enh1/:
+          persist: true
       - ./data/enh/optimize_enh1_trials.csv
       - ./data/enh/optimize_enh1_results.json
 

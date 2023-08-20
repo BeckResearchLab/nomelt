@@ -2,6 +2,11 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, T5Tokenizer, AutoConfig
 import re
 import numpy as np
+from collections import Counter
+from Bio.Align.Applications import ClustalOmegaCommandline
+from Bio import AlignIO
+import tempfile
+
 
 def prepare_model_and_tokenizer(model_path, model_hyperparams=None):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -62,7 +67,8 @@ def translate_sequences(
                 max_length=generation_max_length,
                 num_beams=1,
                 temperature=temperature,
-                num_return_sequences=generation_ensemble_size
+                num_return_sequences=generation_ensemble_size,
+                do_sample=True,
             )
         translated_sequences = _decode_tensor(output_tensor, tokenizer)
 
@@ -71,3 +77,36 @@ def translate_sequences(
     torch.cuda.empty_cache()
     
     return translated_sequences
+
+def perform_alignment(sequences, output_file="aligned.fasta"):
+    # Write sequences to a temporary file
+    with tempfile.NamedTemporaryFile(dir='./tmp', mode='w+t', delete=False) as file:
+        for idx, seq in enumerate(sequences):
+            print(f">seq{idx}\n{seq}\n")
+            file.write(f">seq{idx}\n{seq}\n")
+    
+    # Perform alignment using Clustal Omega
+    clustalomega_cline = ClustalOmegaCommandline(infile=file.name, outfile=output_file, verbose=True, auto=True, force=True)
+    clustalomega_cline()
+    
+    # Read the aligned sequences
+    alignment = AlignIO.read(output_file, "fasta")
+    return alignment
+
+def get_consensus_sequence(alignment):
+    consensus_sequence = ''
+    
+    for col in range(len(alignment[0])):
+        # Count the occurrence of each amino acid at this position
+        amino_acid_counts = Counter(alignment[:, col])
+        
+        # Find the most frequent amino acid
+        most_common_amino_acid = amino_acid_counts.most_common(1)[0][0]
+
+        # if it is a gap, skip it
+        if most_common_amino_acid == '-':
+            continue
+        else:
+            consensus_sequence += most_common_amino_acid
+
+    return consensus_sequence

@@ -7,6 +7,7 @@ import subprocess
 import optuna
 from optuna.pruners import BasePruner
 from optuna.storages import JournalStorage, JournalFileStorage
+from optuna.study import MaxTrialsCallback
 import Bio.pairwise2
 from Bio.Align import substitution_matrices
 from typing import List, Dict, Tuple
@@ -398,14 +399,7 @@ def _worker_optimize(objective, n_trials, sampler, study_name, storage):
         pruner=RepeatPruner(),
         study_name=study_name,
         storage=storage)
-    while True:
-        complete_trials = len(set(str(t.params) for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE))
-        if complete_trials < n_trials:
-            logger.info(f"Found {complete_trials} trials complete out of {n_trials} total. Running a trial")
-            study.optimize(objective, n_trials=1)
-        else:
-            break
-    logger.info(f"No more trials to run. Found {complete_trials} trials complete out of {n_trials} total.")
+    study.optimize(objective, callbacks=[MaxTrialsCallback(n_trials, states=(optuna.trial.TrialState.COMPLETE,))])
 
 
 class OptTrajSuperimposer:
