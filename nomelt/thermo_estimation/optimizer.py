@@ -403,7 +403,7 @@ def _worker_optimize(objective, n_trials, sampler, study_name, storage):
 
 
 class OptTrajSuperimposer:
-    """Class to superimpose structures from an optimization trajectory onto the first structure.
+    """Class to superimpose structures from a trajectory onto the first structure.
     
     Requires MDAnalysis
     First runs sequence alignment (Clustal) on sequences to the reference. Atom selection is made from this
@@ -411,35 +411,34 @@ class OptTrajSuperimposer:
     """
     def __init__(
         self,
-        optimizer: MutationSubsetOptimizer = None,
-        sequences: List[str]=None,
-        structure_files: List[str]=None,
-        trials_dataframe: pd.DataFrame = None,
+        sequences: List[str],
+        structure_files: List[str],
+        values: List[float],
         output_dir: str = None,
     ):
-        if optimizer is not None:
-            self.sequences, self.structure_files = self._get_sorted_opt_traj(optimizer)
-            self.optimizer = optimizer
-        elif sequences is not None and structure_files is not None and trials_dataframe is not None:
-            self.sequences = sequences
-            self.structure_files = structure_files
-            self.trials_dataframe = trials_dataframe
-            self.optimizer = None
-        else:
-            raise ValueError("Must provide either an optimizer or sequences and structure files.")
+        self.structure_files = structure_files
+        self.values = values
+        self.sequences = sequences
+        if len(self.structure_files) != len(self.values):
+            raise ValueError("Structure files and values must have the same length.")
+
         self._parse_universes()
-        #create temp dir
+
+        # Create temp dir
         self.temp_dir = os.path.abspath('./tmp/opt_traj_superimposer')
         if not os.path.exists(self.temp_dir):
             os.makedirs(self.temp_dir, exist_ok=True)
+
         if output_dir is None:
             self.output_dir = self.temp_dir
         else:
             self.output_dir = output_dir
+
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
+
         self.output_files = None
-    
+
     def _parse_universes(self):
         self.universes = []
         for structure_file in self.structure_files:
@@ -521,7 +520,7 @@ class OptTrajSuperimposer:
 
         # now run the script
         result = subprocess.run(f"vmd -e {vmd_script_file}".split())
-        logger.info(result.stdout.decode('utf-8'))
+        # logger.info(result.stdout.decode('utf-8'))
         return png_files
     
     def _make_movie(self, image_files, output_name):
@@ -577,17 +576,9 @@ class OptTrajSuperimposer:
             plt.tight_layout()
             plt.show()
 
-        result_df = self.optimizer_results
-        x = result_df['number']
-        y = result_df['value']
+        y = self.values
+        x = list(range(len(y)))
         animate_pngs(image_files, x, y)
-
-    @property
-    def optimizer_results(self):
-        if self.optimizer is None:
-            return self.trials_dataframe
-        else:
-            return self.optimizer.study.trials_dataframe()
 
     def make_optimization_movie(self):
         """Make a visual of the optimization process
