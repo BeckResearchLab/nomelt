@@ -140,9 +140,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: 76c99b0bfeb922c1125d1b5076a66a97.dir
+      size: 833215556
+      nfiles: 13
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -150,8 +150,8 @@ stages:
       nfiles: 257
     - path: ./scripts/make_predictions.py
       hash: md5
-      md5: 98181c8b634254dffed362691be01db3
-      size: 9541
+      md5: 18cf21ad5614fb9ae934ad9fe68a6dc1
+      size: 8242
     params:
       params.yaml:
         model.generation_max_length: 250
@@ -159,18 +159,18 @@ stages:
     outs:
     - path: ./data/nomelt-model/predictions.tsv
       hash: md5
-      md5: df3499c8038881bcfe0b44a8928ac98d
-      size: 3831638
+      md5: 737859368ef694edaf70544e9c87a65a
+      size: 1155256
   score_predictions:
     cmd: python scripts/score_predictions.py
     deps:
     - path: ./data/nomelt-model/predictions.tsv
       hash: md5
-      md5: df3499c8038881bcfe0b44a8928ac98d
-      size: 3831638
+      md5: 737859368ef694edaf70544e9c87a65a
+      size: 1155256
     - path: ./scripts/score_predictions.py
       hash: md5
-      md5: 72f8c9d08f4dc9af8ec10fb9c7843cec
+      md5: a1e9541da0a4b2cb9fdb6b2229a2355e
       size: 3799
     outs:
     - path: ./data/nomelt-model/test_scores.json

@@ -73,8 +73,8 @@ def main():
     logger.info(f"Loaded predictions.  Computing metrics.")
 
     # chunk up the dataframe and use multiprocessing to compute metrics
-    predictions = df[0].tolist()
-    labels = df[1].tolist()
+    predictions = df[1].tolist()
+    labels = df[2].tolist()
     inputs = [(predictions[i:i+10], labels[i:i+10]) for i in range(0, len(predictions), 10)]
 
     # compute metrics

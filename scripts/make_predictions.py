@@ -35,33 +35,6 @@ LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
 
-# define metrics to compute
-def compute_metrics(predictions, labels):
-    """We use:
-    - ter: translation edit rate
-    - Rouge 2: F1 score for bigrams
-    - Rouge L: score for longest common subsequences
-    - google_bleu: single sentence BLEU like score, minimum of recall and precision on 1, 2, 3, and 4 grams
-    """
-    # outputs encoded
-    length_differences = []
-    for p, l in zip(predictions, labels):
-        length_differences.append((len(p.split()) - len(l.split()))/len(l.split()))
-    # outputs are list of strings, with spaces ## CHECK
-    out_metrics = {'len_diff_frac': np.mean(length_differences)}
-    out_metrics['len_diff_frac_abs']= np.mean(np.abs(length_differences))
-    out_metrics['len_diff_frac_std']=np.std(length_differences)
-    # tranlsation error rate
-    ter_metric = load('ter')
-    out_metrics.update(ter_metric.compute(predictions=predictions, references=labels, normalized=True, case_sensitive=False))
-    # rouge
-    # expects tokens sperated by spaces
-    rouge_metric = load('rouge')
-    out_metrics.update(rouge_metric.compute(predictions=predictions, references=labels, rouge_types=['rouge2', 'rougeL'], use_stemmer=True, use_aggregator=True))
-    # google bleu
-    bleu_metric = load('google_bleu')
-    out_metrics.update(bleu_metric.compute(predictions=predictions, references=labels, max_len=4))
-    return out_metrics
 
 def main():
 
@@ -110,7 +83,7 @@ def main():
         logger.info(f"Loaded dataset.  {dataset}")
 
         # keep only extremes in dataset to get a better uniform score
-        dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique']).select(range(5000))
+        dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique']).select(range(1000))
         logger.info(f"Keeping only extreme cluster and unique sequences. New size: {dataset}")
 
         # preprocess data with tokenizer
@@ -188,10 +161,11 @@ def main():
             predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
             labels = torch.where(labels != -100, labels, tokenizer.pad_token_id)
             labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+            inputs = tokenizer.batch_decode(batch['input_ids'], skip_special_tokens=True)
 
             # write predictions to file
-            for p, l in zip(predictions, labels):
-                prediction_file.write(f"{p}\t{l}\n")
+            for i, p, l in zip(inputs, predictions, labels):
+                prediction_file.write(f"{i}\t{p}\t{l}\n")
 
         total_loss = accelerator.gather_for_metrics(total_loss)
 
@@ -212,11 +186,11 @@ def main():
         dfs = [pd.read_csv(f'./data/nomelt-model/{f}', sep='\t', header=None) for f in os.listdir('./data/nomelt-model/') if 'device_predictions' in f]
         df = pd.concat(dfs)
         # remove old files
+        df.to_csv('./data/nomelt-model/predictions.tsv', sep='\t', header=None, index=False)
         for f in os.listdir('./data/nomelt-model/'):
             if 'device_predictions' in f:
                 os.remove(f'./data/nomelt-model/{f}')
-        df.columns = ['predictions', 'labels']
-        df.to_csv('./data/nomelt-model/predictions.tsv', sep='\t', header=None, index=False)
+        
     try:
         tracker.stop()
     except:
