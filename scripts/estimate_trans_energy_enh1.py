@@ -17,7 +17,8 @@ estimator_args=mAFminDGArgs(
     wdir='./data/enh/initial_estimate/',
     use_relaxed=False,
     num_replicates=50,
-    fix_msas=False
+    fix_msas=True,
+    residue_length_norm=True
 )
 if __name__ == '__main__':
     tracker = codecarbon.OfflineEmissionsTracker(

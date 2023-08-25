@@ -91,7 +91,7 @@ def run_alphafold(sequences: list[str], sequence_names: list[str], args: AlphaFo
     The function creates a temporary FASTA file containing the provided sequences and names, and then runs the AlphaFold script with the specified parameters. After the process is complete, the results are stored in the specified output directory, following the structure described in the notes.
     """
     if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+        os.makedirs(args.output_dir, exist_ok=True)
     
     fasta_files = [os.path.join(args.output_dir, str(name)+".fasta") for name in sequence_names]
 
@@ -127,6 +127,7 @@ class mAFminDGArgs:
     wdir: str = './tmp'
     num_replicates: int = 5
     fix_msas: bool = False # always leave precomputed msas on even for first seq run
+    residue_length_norm: bool = True
 
     def __post_init__(self):
         if type(self.af_params) == str:
@@ -153,6 +154,32 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
         # Run AlphaFold multiple times (num_replicates) as per the requirements
         output_type = 'relaxed' if self.args.use_relaxed else 'unrelaxed'
         files_dict = {}
+
+        # check if the outputs already exist
+        finished_ids = []
+        for sequence_id in ids:
+            if os.path.exists(os.path.join(self.args.wdir, str(sequence_id))):
+                logger.info(f"Found existing output directory for {sequence_id}.")
+                replicates_found = 0
+                for file in os.listdir(os.path.join(self.args.wdir, str(sequence_id))):
+                    if 'ensemble_replicate' in file:
+                        replicates_found += 1
+                if replicates_found >= self.args.num_replicates:    
+                    files_dict[sequence_id] = os.path.join(self.args.wdir, str(sequence_id))
+                    logger.info(f"Found {replicates_found} replicates for {sequence_id}. Skipping AF run")
+                    finished_ids.append(sequence_id)
+        sequences_to_run = []
+        ids_to_run = []
+        for i, id_ in enumerate(ids):
+            if id_ not in finished_ids:
+                sequences_to_run.append(sequences[i])
+                ids_to_run.append(id_)
+        if len(sequences_to_run) == 0:
+            logger.info("No sequences to run. Skipping AF run.")
+            return files_dict
+        else:
+            logger.info(f"Running AF on {len(sequences_to_run)} sequences.")
+
         for replicate in range(self.args.num_replicates):
             if replicate == 0 and not self.args.fix_msas:
                 self.af_params.use_precomputed_msas = False
@@ -160,12 +187,12 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
                 self.af_params.use_precomputed_msas = True
 
             time0 = time.time()
-            run_alphafold(sequences, ids, self.af_params)
+            run_alphafold(sequences_to_run, ids_to_run, self.af_params)
             time1 = time.time()
             logger.info(f"Finished replicate {replicate}. Time taken: {(time1 - time0)/60} mins.")
 
             # Rename the output files to include the replicate number
-            for sequence_id in ids:
+            for sequence_id in ids_to_run:
                 sequence_dir = None
                 for file in os.listdir(self.args.wdir):
                     if file == str(sequence_id) and os.path.isdir(os.path.join(self.args.wdir, file)):
@@ -201,7 +228,7 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
             if sequence_dir is None:
                 raise Exception(f"Could not find directory for sequence ID {sequence_id}.")
             pdb_files = [file for file in os.listdir(sequence_dir) if file.startswith("ensemble_replicate")]
-            if len(pdb_files) != self.af_params.num_models * self.args.num_replicates:
+            if len(pdb_files) < self.af_params.num_models * self.args.num_replicates:
                 raise ValueError(f"Found {len(pdb_files)} PDB files for {sequence_id}, expected {self.af_params.num_models * self.args.num_replicates}.")
             logger.info(f"Computing energies for {sequence_id}... found {len(pdb_files)} PDB files in the ensemble.")
             # get full paths to the PDB files
@@ -220,6 +247,18 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
         files_dict = self.generate_alphafold_ensembles(sequences, ids)
         self.pdb_files_history.update(files_dict)
         energies = self.compute_ensemble_energies(ids)
+
+        # normalize by length
+        if self.args.residue_length_norm:
+            for id_ in ids:
+                og_values = np.array(energies[id_])
+                logger.debug(f"Original energies for {id_}: {og_values}")
+                seq = sequences[ids.index(id_)]
+                seq_len = len(seq)
+                logger.debug(f"Sequence length for {id_}: {seq_len}")
+                energies[id_] = list(og_values / seq_len)
+                logger.debug(f"Normalized energies for {id_}: {energies[id_]}")
+
         time1 = time.time()
         logger.info(f"Total time taken for estimator call: {(time1 - time0)/60} mins.")
         return energies

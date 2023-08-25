@@ -99,7 +99,8 @@ stages:
       - model.generation_max_length
       - model.generation_num_beams
     outs:
-      - ./data/enh/translate_enh1.json
+      - ./data/enh/translate_enh1.json:
+          cache: false
   estimate_trans_energy_enh1:
     wdir: ./
     cmd: python scripts/estimate_trans_energy_enh1.py
@@ -111,7 +112,8 @@ stages:
       - optimize.estimator
       - optimize.estimator_args
     outs:
-      - ./data/enh/translated_energy_enh1.json
+      - ./data/enh/translated_energy_enh1.json:
+          cache: false
       - ./data/enh/initial_estimate/
 
   optimize_enh1:
@@ -139,7 +141,24 @@ stages:
     outs:
       - ./data/enh/optimize_enh1/:
           persist: true
-      - ./data/enh/optimize_enh1_trials.csv
+      - ./data/enh/optimize_enh1_trials.csv:
+          cache: false
+      - ./data/enh/optimize_enh1_results.json:
+          cache: false
+
+  trans_binding:
+    wdir: ./
+    cmd: python scripts/dna_binding_alignment.py
+    deps:
+      - ./scripts/dna_binding_alignment.py
       - ./data/enh/optimize_enh1_results.json
+      - ./data/enh/initial_estimate/
+      - ./data/enh/optimize_enh1/
+    outs:
+      - ./data/enh/enh1_vs_consensus_dna_binding.json:
+          cache: false
+      - ./data/enh/trans_binding/
+
+
 
 

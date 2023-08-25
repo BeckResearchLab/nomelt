@@ -219,6 +219,7 @@ stages:
           use_relaxed: false
           num_replicates: 25
           fix_msas: true
+          residue_length_norm: true
         optimize.gap_compressed_mutations: true
         optimize.gapextend: -1
         optimize.gapopen: -4
@@ -226,7 +227,7 @@ stages:
         optimize.matrix: BLOSUM62
         optimize.mismatch_score: -1
         optimize.n_trials: 100
-        optimize.optuna_overwrite: false
+        optimize.optuna_overwrite: true
         optimize.penalize_end_gaps: false
         optimize.sampler: NSGAIISampler
         optimize.sampler_args:
@@ -234,17 +235,17 @@ stages:
     outs:
     - path: ./data/enh/optimize_enh1/
       hash: md5
-      md5: 6a3220fc3db71ce369e7106b1b45da35.dir
-      size: 1695734580
-      nfiles: 4457
+      md5: b72de91049cc3dd3727d3fd3cbfba83e.dir
+      size: 3199195000
+      nfiles: 8440
     - path: ./data/enh/optimize_enh1_results.json
       hash: md5
-      md5: 24bca24b9cca3b8ce6d5a469a733b73d
-      size: 260
+      md5: b8efa48bb1ea05ecf5a560d6815d08ec
+      size: 261
     - path: ./data/enh/optimize_enh1_trials.csv
       hash: md5
-      md5: 450847a9ac0eb592b9a3f145e48cfab5
-      size: 157505
+      md5: ccf9a62957a845b9e535631343b9e635
+      size: 89352
   estimate_trans_energy_enh1:
     cmd: python scripts/estimate_trans_energy_enh1.py
     deps:
@@ -258,8 +259,8 @@ stages:
       size: 170
     - path: scripts/estimate_trans_energy_enh1.py
       hash: md5
-      md5: 26e8c5a3dab1ed6d27e390492d907fdd
-      size: 1353
+      md5: b7a6656c4c6fabdde84c79920da0bca9
+      size: 1382
     params:
       params.yaml:
         optimize.estimator: mAFminDGEstimator
@@ -268,13 +269,14 @@ stages:
           use_relaxed: false
           num_replicates: 25
           fix_msas: true
+          residue_length_norm: true
     outs:
     - path: ./data/enh/initial_estimate/
       hash: md5
-      md5: 5767fecc932956fc42a4c331efb08850.dir
-      size: 15859178
+      md5: c9c6c008e00f198cab04af3b311ee075.dir
+      size: 15859176
       nfiles: 64
     - path: ./data/enh/translated_energy_enh1.json
       hash: md5
-      md5: ee2dd680f51412bdba441ba2ae74d09b
-      size: 52
+      md5: 2a4bc8d1786a7ebb379c14915363c8af
+      size: 54

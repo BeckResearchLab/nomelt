@@ -1,0 +1,10 @@
+{
+  "enh1": {
+    "score": -207.24360000000001,
+    "complex": "/mmfs1/gscratch/cheme/usr/evankomp/repos/nomelt/tmp/enh1_vs_cons_binding/enh1/run/4_emref/emref_12.pdb"
+  },
+  "consensus": {
+    "score": -222.3714,
+    "complex": "/mmfs1/gscratch/cheme/usr/evankomp/repos/nomelt/tmp/enh1_vs_cons_binding/consensus/run/4_emref/emref_17.pdb"
+  }
+}

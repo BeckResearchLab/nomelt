@@ -46,6 +46,7 @@ optimize:
     use_relaxed: False
     num_replicates: 25
     fix_msas: true
+    residue_length_norm: true
   n_trials: 100
   direction: minimize  # or 'maximize'
   sampler: NSGAIISampler
@@ -59,6 +60,6 @@ optimize:
   penalize_end_gaps: false
   sampler_args:
     population_size: 10
-  optuna_overwrite: false
+  optuna_overwrite: true
 
 

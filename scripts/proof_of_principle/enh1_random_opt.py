@@ -8,6 +8,7 @@ from dask_cuda import LocalCUDACluster
 from dask.distributed import Client
 import codecarbon
 import torch
+import numpy as np
 
 from nomelt.thermo_estimation.optimizer import MutationSubsetOptimizer, OptimizerArgs, OptTrajSuperimposer
 import nomelt.thermo_estimation
@@ -23,6 +24,8 @@ else:
 LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
+AAS = list('ARNDECQGHILKMFPSTWYV')
+N_MUTATIONS = 14
 
 def main():
     # start logger
@@ -36,7 +39,7 @@ def main():
     utils_logger.addHandler(fh)
 
     tracker = codecarbon.OfflineEmissionsTracker(
-        project_name="enh1_consensus_optimize",
+        project_name="enh1_random_optimize",
         output_dir="./data/",
         country_iso_code="USA",
         region="washington"
@@ -53,8 +56,8 @@ def main():
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
 
-    if not os.path.exists('./tmp/optimize_consensus'):
-        os.makedirs('./tmp/optimize_consensus')
+    if not os.path.exists('./tmp/optimize_random'):
+        os.makedirs('./tmp/optimize_random')
     
     # get estimator class
     estimator_class = getattr(nomelt.thermo_estimation, params['optimize']['estimator'])
@@ -69,6 +72,23 @@ def main():
     estimator = estimator_class(args=estimator_args)
     logger.info(f"Using estimator {estimator_class.__name__} with args {estimator_args}.")
 
+    # pruduce a random set of mutations
+    ENH1 = "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK"
+    variant_seq = list(ENH1)
+    mutation_sites = np.random.choice(range(len(ENH1)), N_MUTATIONS, replace=False)
+    mutation_AAs = np.random.choice(AAS, N_MUTATIONS, replace=True)
+    logger.info(f"Mutation sites, AAs: {mutation_sites}, {mutation_AAs}")
+    # make sure the mutation is not the same AA
+    for i, site in enumerate(mutation_sites):
+        while variant_seq[site] == mutation_AAs[i]:
+            mutation_AAs[i] = np.random.choice(AAS)
+    # make the mutations
+    for i, site in enumerate(mutation_sites):
+        variant_seq[site] = mutation_AAs[i]
+    variant_seq = ''.join(variant_seq)
+    logger.info(f"OG Seq: {ENH1}")
+    logger.info(f"Var seq {variant_seq}")
+
     # set up the optimizer
     optimizer_args = OptimizerArgs(
         n_trials=params['optimize']['n_trials'],
@@ -82,17 +102,17 @@ def main():
         match_score=params['optimize']['match_score'],
         mismatch_score=params['optimize']['mismatch_score'],
         penalize_end_gaps=params['optimize']['penalize_end_gaps'],
-        optuna_storage='./tmp/optimize_consensus/optuna.log',
+        optuna_storage='./tmp/optimize_random/optuna.log',
         optuna_overwrite=params['optimize']['optuna_overwrite'],
         measure_initial_structures=False
     )
     logger.info(f"Optimizer args: {optimizer_args}")
     optimizer = MutationSubsetOptimizer(
-        "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK",
-        "RRKRTTFTKEQLEELEELFEKNRYPSAEEREELAKKLGLTERQVKVWFQNRRAKEKK",
+        ENH1,
+        variant_seq,
         args=optimizer_args,
-        name='enh_vs_consensus',
-        wdir='./tmp/optimize_consensus/',
+        name='enh_vs_random',
+        wdir='./tmp/optimize_random/',
         estimator=estimator)
     
     # run the optimization
@@ -104,9 +124,9 @@ def main():
         'best_sequence': optimizer.best_trial.user_attrs['variant_seq'],
         'best_structure': optimizer.best_trial.user_attrs['pdb_file'],
     }
-    with open(f'./data/proof_of_principle/optimize_enh1_cons_results.json', 'w') as f:
+    with open(f'./data/proof_of_principle/optimize_enh1_random_results.json', 'w') as f:
         json.dump(outs, f, indent=4)
-    optimizer.study.trials_dataframe().to_csv(f'./data/proof_of_principle/optimize_enh1_cons_trials.csv')
+    optimizer.study.trials_dataframe().to_csv(f'./data/proof_of_principle/optimize_enh1_rand_trials.csv')
     logger.info("Saved results.")
     tracker.stop()
 

@@ -114,9 +114,9 @@ class MutationSubsetOptimizer:
         self.estimator.args.wdir = self.wdir
         self._set_mutation_set()
 
-        if args.optuna_overwrite and os.path.exists(self.params.optuna_storage[10:]):
-            logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage[10:]}")
-            os.remove(self.params.optuna_storage[10:])
+        if args.optuna_overwrite and os.path.exists(self.params.optuna_storage):
+            logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage}")
+            os.remove(self.params.optuna_storage)
 
     def _init_estimator_call(self):
         logger.info("Running initial estimator call")

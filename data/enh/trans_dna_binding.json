@@ -1,0 +1,10 @@
+{
+  "trans": {
+    "score": -230.27960000000002,
+    "complex": "/mmfs1/gscratch/cheme/usr/evankomp/repos/nomelt/data/enh/trans_binding/trans/run/4_emref/emref_10.pdb"
+  },
+  "optimized_trans": {
+    "score": -226.24300000000002,
+    "complex": "/mmfs1/gscratch/cheme/usr/evankomp/repos/nomelt/data/enh/trans_binding/trans_opt/run/4_emref/emref_16.pdb"
+  }
+}
