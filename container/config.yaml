@@ -1,0 +1,44 @@
+# Step 1: Beam Search Translation
+beam_search:
+  enabled: true
+  generation_max_length: 250  # Default values
+  generation_num_beams: 10
+  model_hyperparams: null
+
+# Step 2: Stochastic Sequence Generation
+stochastic:
+  enabled: false  # Default is disabled
+  generation_ensemble_size: 50
+  temperature: 0.5
+  max_length_difference: 0.1 # fraction difference from input
+
+# Step 3: Output Permutations libary
+output_library:
+  enabled: true
+
+# Step 4: In Silico Optimization
+optimization:
+  enabled: false
+  estimator: mAFminDGEstimator
+  estimator_args: 
+    af_params: ./.config/af_singularity_config.yaml
+    use_relaxed: False
+    num_replicates: 25
+    fix_msas: true
+    residue_length_norm: true
+  optimizer_args:
+    n_trials: 100
+    direction: minimize
+    sampler: NSGAIISampler
+    cut_tails: null
+    gap_compressed_mutations: true
+    matrix: BLOSUM62
+    match_score: 1
+    mismatch_score: -1
+    gapopen: -4
+    gapextend: -1
+    penalize_end_gaps: false
+    sampler_args:
+      population_size: 10
+    optuna_overwrite: false
+    

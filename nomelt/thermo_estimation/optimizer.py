@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 import MDAnalysis.analysis.align
 import pandas as pd
+import itertools
 
 import nomelt.thermo_estimation.estimator
 
@@ -261,6 +262,15 @@ class MutationSubsetOptimizer:
 
         logger.info("Aligned sequences with mutations marked:")
         logger.info('\n'+net_string)
+
+    def all_permutations(self):
+        """Return all possible variant sequences based on all permutations of mutations"""
+        combs = []
+        for i, k in enumerate(self.mutation_set.keys()):
+            combs.extend(list(itertools.combinations(self.mutation_set.keys(), i+1)))
+        combs = [self._get_variant_sequence(c) for c in combs]
+        combs.append(self.variant)
+        return combs
 
     def _get_variant_sequence(self, mutation_subset: List[str]) -> str:
         variant = list(self.aligned_wt)  # Create a mutable copy
