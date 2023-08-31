@@ -1,4 +1,5 @@
 stages:
+# get data ready for training eg. filtering out all but best pairs, balancing, etc.
   prepare_data:
     wdir: ./
     cmd: python scripts/prepare_data.py
@@ -21,6 +22,7 @@ stages:
     metrics:
       - ./data/data_metrics.yaml:
           cache: false
+# train model
   train:
     wdir: ./
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train.py 
@@ -68,6 +70,7 @@ stages:
     plots:
       - ./data/nomelt-model/live/static/:
           cache: false
+# run the model on test set and save generated sequences
   make_predictions:
     wdir: ./
     cmd:  accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml scripts/make_predictions.py 
@@ -80,7 +83,7 @@ stages:
       - model.generation_num_beams
     outs:
       - ./data/nomelt-model/predictions.tsv
-
+# compute metrics on the test set from the predictions
   score_predictions:
     wdir: ./
     cmd: python scripts/score_predictions.py
@@ -89,6 +92,7 @@ stages:
       - ./data/nomelt-model/predictions.tsv
     outs:
       - ./data/nomelt-model/test_scores.json
+# call the model to generate thermostable variant of enh1
   translate_enh1:
     wdir: ./
     cmd: python scripts/translate_enh1.py
@@ -101,6 +105,7 @@ stages:
     outs:
       - ./data/enh/translate_enh1.json:
           cache: false
+# call thermostability estimator on the generated sequence
   estimate_trans_energy_enh1:
     wdir: ./
     cmd: python scripts/estimate_trans_energy_enh1.py
@@ -115,7 +120,7 @@ stages:
       - ./data/enh/translated_energy_enh1.json:
           cache: false
       - ./data/enh/initial_estimate/
-
+# use thermo estimator to find a subset of mutations that are likely to increase thermostability
   optimize_enh1:
     wdir: ./
     cmd: python scripts/optimize_enh1.py
@@ -145,7 +150,7 @@ stages:
           cache: false
       - ./data/enh/optimize_enh1_results.json:
           cache: false
-
+# estimate the DNA binding of the enh1 variant proposed by the model as well as the optimization process
   trans_binding:
     wdir: ./
     cmd: python scripts/dna_binding_alignment.py
@@ -158,7 +163,67 @@ stages:
       - ./data/enh/enh1_vs_consensus_dna_binding.json:
           cache: false
       - ./data/enh/trans_binding/
-
+# proof of principle scripts
+#################################
+# call the af2dg thermostability estimator on a sample of data and save the scores
+  data_estimator_distribution:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/data_estimator_distribution.py
+    deps:
+      - ./data/nomelt-model/predictions.tsv
+      - ./scripts/proof_of_principle/data_estimator_distribution.py
+    outs:
+     - ./data/proof_of_principle/training_data_estimated.json:
+         cache: false
+# call the af2dg thermostability estimator the wild type enh and the consensus sequence from literature
+  enh1_vs_consensus_in_silico_estimator:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+    deps:
+      - ./scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+    outs:
+      - ./data/proof_of_principle/enh1_vs_consensus_in_silico_estimator_out.json:
+          cache: false
+# manually add a few mutations to the wild type enh and call the af2dg thermostability estimator to see how it effects the score
+  enh1_vary_mutations:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/enh1_vary_mutations.py
+    deps:
+      - ./scripts/proof_of_principle/enh1_vary_mutations.py
+    outs:
+      - ./data/proof_of_principle/vary_mutations.json:
+          cache: false
+# run the optimization process on the wild type enh vs literature consensus sequence
+  enh1_consensus_optimize:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/enh1_consensus_optimize.py
+    deps:
+      - ./scripts/proof_of_principle/enh1_consensus_optimize.py
+    outs:
+      - ./data/proof_of_principle/optimize_enh1_cons_results.json:
+          cache: false
+      - ./data/proof_of_principle/optimize_enh1_cons_trials.csv:
+          cache: false
+# run the optimization process on the wild type enh vs random sequence
+  enh1_random_opt: 
+    wdir: ./
+    cmd: python scripts/proof_of_principle/enh1_random_opt.py
+    deps:
+      - ./scripts/proof_of_principle/enh1_random_opt.py
+    outs:
+      - ./data/proof_of_principle/optimize_enh1_random_results.json:
+          cache: false
+      - ./data/proof_of_principle/optimize_enh1_rand_trials.csv:
+          cache: false
+# get the docking scores from haddock of the wild type enh vs consensus sequence
+  enh1_vs_consensus_docking_score.py:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
+    deps:
+      - ./scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
+    outs:
+      - ./data/proof_of_principle/enh1_vs_consensus_dna_binding.json:
+          cache: false
 
 
 

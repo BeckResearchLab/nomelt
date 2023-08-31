@@ -52,7 +52,7 @@ if __name__ == '__main__':
     enh_score, enh_complex = do_one(ENH1_PDB, 'enh1')
     cons_score, cons_complex = do_one(CONSENSUS_PDB, "consensus")
 
-    with open('./data/enh/enh1_vs_consensus_dna_binding.json', 'w') as f:
+    with open('./data/proof_of_principle/enh1_vs_consensus_dna_binding.json', 'w') as f:
         json.dump({
             'enh1': {
                 'score': enh_score,
