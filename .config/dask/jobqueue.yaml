@@ -1,0 +1,30 @@
+jobqueue:
+
+  slurm:
+    name: nomelt-workker
+
+    # Dask worker options
+    cores: 1                 # Total number of cores per job
+    job_cpu: 6
+    memory: '40G'                # Total amount of memory per job
+    processes: 1                # Number of Python processes per job
+
+    interface: null             # Network interface to use like eth0 or ib0
+    death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
+    local-directory: /mmfs1/gscratch/cheme/usr/evankomp/repos/nomelt/       # Location of fast local storage like /scratch or $TMPDIR
+
+    # SLURM resource manager options
+    shebang: "#!/usr/bin/env bash"
+    queue: gpu-a40
+    account: escience
+    walltime: '16:00:00'
+    job-mem: null
+    log-directory: './logs/dask/'
+    
+    job_extra_directives: ['--nodes=1', '--ntasks-per-node=1', '--hint=multithread', '--export=all', '--gpus=1']
+    worker_extra_args: ["--lifetime", "85m", "--lifetime-stagger", "5m"]
+    job_script_prologue: ["source ~/.bashrc", "mamba activate nomelt2"]    
+    
+    # Scheduler options
+    scheduler-options: {}
+
