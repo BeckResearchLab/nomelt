@@ -140,9 +140,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 76c99b0bfeb922c1125d1b5076a66a97.dir
-      size: 833215556
-      nfiles: 13
+      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
+      size: 829652740
+      nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -280,3 +280,19 @@ stages:
       hash: md5
       md5: 2a4bc8d1786a7ebb379c14915363c8af
       size: 54
+  data_estimator_distribution:
+    cmd: python scripts/proof_of_principle/data_estimator_distribution.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 737859368ef694edaf70544e9c87a65a
+      size: 1155256
+    - path: ./scripts/proof_of_principle/data_estimator_distribution.py
+      hash: md5
+      md5: e8d805651dd8f8d87e8deb04ae9f9424
+      size: 5021
+    outs:
+    - path: ./data/proof_of_principle/training_data_estimated.json
+      hash: md5
+      md5: 2b77af5e7cb3e502084a8f630fa07b47
+      size: 7352

@@ -8,6 +8,7 @@ from yaml import safe_load
 import optuna.samplers
 from dask_cuda import LocalCUDACluster
 from dask.distributed import Client, wait
+from dask.distributed import get_worker
 import codecarbon
 import torch
 import pandas as pd
@@ -77,7 +78,8 @@ def main():
         logger = logging.getLogger('root')
         logger.setLevel(logging.INFO)
         fh = logging.FileHandler(LOGFILE, mode='a')
-        formatter = logging.Formatter('%(filename)-12s %(asctime)s;%(funcName)-12s: %(levelname)-8s %(message)s')
+        wid = get_worker().name
+        formatter = logging.Formatter(f'WORKER {wid} '+'%(filename)-12s %(asctime)s;%(funcName)-12s: %(levelname)-8s %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
         result = estimator.run(sequences, ids)

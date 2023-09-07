@@ -178,7 +178,7 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
             logger.info("No sequences to run. Skipping AF run.")
             return files_dict
         else:
-            logger.info(f"Running AF on {len(sequences_to_run)} sequences.")
+            logger.info(f"Running AF on {ids_to_run}.")
 
         for replicate in range(self.args.num_replicates):
             if replicate == 0 and not self.args.fix_msas:
