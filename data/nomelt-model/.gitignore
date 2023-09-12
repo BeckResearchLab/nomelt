@@ -1,3 +1,4 @@
 /model
 /predictions.tsv
 /test_scores.json
+/test_embeddings

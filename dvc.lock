@@ -296,3 +296,66 @@ stages:
       hash: md5
       md5: 2b77af5e7cb3e502084a8f630fa07b47
       size: 7352
+  enh1_vs_consensus_in_silico_estimator:
+    cmd: python scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+      hash: md5
+      md5: bb39bfb33ca6535dd0f1dbcd7d051152
+      size: 1366
+    outs:
+    - path: ./data/proof_of_principle/enh1_vs_consensus_in_silico_estimator_out.json
+      hash: md5
+      md5: 492c3f24b0782ead2c79a1d715c5dfea
+      size: 112
+  enh1_vary_mutations:
+    cmd: python scripts/proof_of_principle/enh1_vary_mutations.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_vary_mutations.py
+      hash: md5
+      md5: e83bdf5eb5fd0d16e3b567b87195dbe4
+      size: 1646
+    outs:
+    - path: ./data/proof_of_principle/vary_mutations.json
+      hash: md5
+      md5: 20b6bb7e29f92a4e74ae37ef58e3009c
+      size: 227
+  enh1_consensus_optimize:
+    cmd: python scripts/proof_of_principle/enh1_consensus_optimize.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_consensus_optimize.py
+      hash: md5
+      md5: eeca826940098aeb6d0c44d58a42660c
+      size: 4538
+    outs:
+    - path: ./data/proof_of_principle/optimize_enh1_cons_results.json
+      hash: md5
+      md5: c2c7b798834fed24fc37af70d07e8c13
+      size: 255
+    - path: ./data/proof_of_principle/optimize_enh1_cons_trials.csv
+      hash: md5
+      md5: f50ea434e09ac0196e8e6701fc3892cc
+      size: 90406
+  compute_test_embeddings:
+    cmd: python scripts/compute_test_embeddings.py
+    deps:
+    - path: ./data/dataset/
+      hash: md5
+      md5: 2f1999b8d54c920d130a61bb2292c643.dir
+      size: 615300854596
+      nfiles: 16
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
+      size: 321368839764
+      nfiles: 257
+    - path: ./scripts/compute_test_embeddings.py
+      hash: md5
+      md5: abf29059c5b9ed3f1fb191ee18e109f3
+      size: 5291
+    outs:
+    - path: ./data/nomelt-model/test_embeddings
+      hash: md5
+      md5: 28793d49cff5fc42b4923ffc079012ba.dir
+      size: 590981137638
+      nfiles: 1184

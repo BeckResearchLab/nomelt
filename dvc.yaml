@@ -163,6 +163,15 @@ stages:
       - ./data/enh/enh1_vs_consensus_dna_binding.json:
           cache: false
       - ./data/enh/trans_binding/
+  compute_test_embeddings:
+    wdir: ./
+    cmd: python scripts/compute_test_embeddings.py
+    deps: 
+      - ./scripts/compute_test_embeddings.py
+      - ./data/dataset/
+      - ./data/nomelt-model/model/
+    outs:
+      - ./data/nomelt-model/test_embeddings
 # proof of principle scripts
 #################################
 # call the af2dg thermostability estimator on a sample of data and save the scores
