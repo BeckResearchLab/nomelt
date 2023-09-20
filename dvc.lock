@@ -359,3 +359,48 @@ stages:
       md5: 28793d49cff5fc42b4923ffc079012ba.dir
       size: 590981137638
       nfiles: 1184
+  enh1_vs_consensus_docking_score:
+    cmd: python scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
+      hash: md5
+      md5: 3706409c13ccbb0525142bc9a713938c
+      size: 2148
+    outs:
+    - path: ./data/proof_of_principle/enh1_vs_consensus_dna_binding.json
+      hash: md5
+      md5: af24131eab9b8a7227ec8d622f4d3b7d
+      size: 344
+  enh1_random_opt:
+    cmd: python scripts/proof_of_principle/enh1_random_opt.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_random_opt.py
+      hash: md5
+      md5: e53c4f08416579acf3e90aeadfabaad1
+      size: 5285
+    outs:
+    - path: ./data/proof_of_principle/optimize_enh1_rand_trials.csv
+      hash: md5
+      md5: 9ea9f045a60bf58ac04cc0d47785d093
+      size: 75867
+    - path: ./data/proof_of_principle/optimize_enh1_random_results.json
+      hash: md5
+      md5: b2828d95e87517ad2dc22038189458be
+      size: 252
+  natural_diversity_entropy:
+    cmd: python scripts/proof_of_principle/natural_diversity_entropy.py
+    deps:
+    - path: ./data/dataset
+      hash: md5
+      md5: 7c0a4fb64a2c5c79ce84214dfe64cfd5.dir
+      size: 830252020
+      nfiles: 13
+    - path: ./scripts/proof_of_principle/natural_diversity_entropy.py
+      hash: md5
+      md5: 0ed48ea4bd3e02b45d464788e6138d6a
+      size: 4832
+    outs:
+    - path: ./data/proof_of_principle/natural_diversity_entropy.json
+      hash: md5
+      md5: 2688a7b8fc6e3f9df885afca2c0bc68e
+      size: 37

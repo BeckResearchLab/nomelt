@@ -170,8 +170,16 @@ stages:
       - ./scripts/compute_test_embeddings.py
       - ./data/dataset/
       - ./data/nomelt-model/model/
+  # compare generated to thermophilic structures
+  compare_structure:
+    wdir: ./
+    cmd: python scripts/compare_structure.py
+    deps:
+      - ./scripts/compare_structure.py
+      - ./data/nomelt-model/predictions.tsv
     outs:
-      - ./data/nomelt-model/test_embeddings
+      - ./data/nomelt-model/structure_metrics.json:
+          cache: false
 # proof of principle scripts
 #################################
 # call the af2dg thermostability estimator on a sample of data and save the scores
@@ -184,6 +192,16 @@ stages:
     outs:
      - ./data/proof_of_principle/training_data_estimated.json:
          cache: false
+# natural log loss
+  natural_diversity_entropy:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/natural_diversity_entropy.py
+    deps:
+      - ./data/dataset
+      - ./scripts/proof_of_principle/natural_diversity_entropy.py
+    outs:
+      - ./data/proof_of_principle/natural_diversity_entropy.json:
+          cache: false
 # call the af2dg thermostability estimator the wild type enh and the consensus sequence from literature
   enh1_vs_consensus_in_silico_estimator:
     wdir: ./
@@ -225,7 +243,7 @@ stages:
       - ./data/proof_of_principle/optimize_enh1_rand_trials.csv:
           cache: false
 # get the docking scores from haddock of the wild type enh vs consensus sequence
-  enh1_vs_consensus_docking_score.py:
+  enh1_vs_consensus_docking_score:
     wdir: ./
     cmd: python scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
     deps:
