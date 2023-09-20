@@ -36,7 +36,7 @@ class OptimizerArgs:
     n_trials: int = 10
     direction: str = 'minimize'  # or 'maximize'
     sampler: optuna.samplers.BaseSampler = optuna.samplers.TPESampler()
-    measure_initial_structures: bool = True
+    measure_initial_structures: bool = True, # measure full wild type, variant, and single mutations before optimizing
     cut_tails: Union[None, int] = None # number of gap spaces to keep om ends of the alignment
     gap_compressed_mutations: bool = False # whether to consider a string of gaps a single mutation
     matrix: str = None
@@ -75,8 +75,6 @@ class MutationSubsetOptimizer:
         The wild type sequence after alignment.
     aligned_variant : str
         The variant sequence after alignment.
-    initial_targets : Dict[str, float]
-        The initial targets for the wild type and variant sequences.
     study : optuna.Study
         The optuna study object after optimization.
     best_mutations : List[str]:
@@ -119,11 +117,23 @@ class MutationSubsetOptimizer:
             logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage}")
             os.remove(self.params.optuna_storage)
 
-    def _init_estimator_call(self):
+    def _init_estimator_call(self, study):
         logger.info("Running initial estimator call")
-        initial_targets = self.estimator.run([self.wt, self.variant], ['wt', 'variant'])
-        self.initial_targets = initial_targets
-        logger.info(f"Initial targets: {initial_targets}")
+        # we are going to enqueue trials into the study
+        # wt and viariant is all off and all on mutations
+        params_to_queue = []
+        # first the wt
+        params_to_queue.append({k: False for k in self.mutation_set.keys()})
+        # now the variant
+        params_to_queue.append({k: True for k in self.mutation_set.keys()})
+        # now the single mutations. We want all but the one mutation to be False
+        for k in self.mutation_set.keys():
+            params_ = {j: False for j in self.mutation_set.keys()}
+            params_[k] = True
+            params_to_queue.append(params_)
+        # now queue them
+        for params_ in params_to_queue:
+            study.enqueue_trial(params_)
 
     def _set_mutation_set(self):
         if self.params.matrix is not None:
@@ -300,11 +310,6 @@ class MutationSubsetOptimizer:
         
         Uses parallel workers if n_jobs > 1 and a dask.distributed.Client object is provided.
         """
-        if self.params.measure_initial_structures:
-            self._init_estimator_call()
-        else:
-            pass
-
         # load the study
         storage = self._get_storage()
         study = optuna.create_study(direction=self.params.direction, study_name=self.name, storage=storage, load_if_exists=True)
@@ -326,6 +331,12 @@ class MutationSubsetOptimizer:
             logger.info(f"Starting new study.")
 
         self.study=study
+
+        if self.params.measure_initial_structures:
+            self._init_estimator_call(study)
+        else:
+            pass
+
         args = (OptunaObjective(self), self.params.n_trials, self.params.sampler, self.name, storage)
         if n_jobs == 1:
             _worker_optimize(*args)

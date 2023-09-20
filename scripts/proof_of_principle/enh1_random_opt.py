@@ -104,7 +104,7 @@ def main():
         penalize_end_gaps=params['optimize']['penalize_end_gaps'],
         optuna_storage='./tmp/optimize_random/optuna.log',
         optuna_overwrite=params['optimize']['optuna_overwrite'],
-        measure_initial_structures=False
+        measure_initial_structures=True
     )
     logger.info(f"Optimizer args: {optimizer_args}")
     optimizer = MutationSubsetOptimizer(
