@@ -44,6 +44,7 @@ dependencies:
     - modelcif
     - optuna
     - pillow
+    - pydssp
     - dask
     - dask-cuda
     - clustalo
