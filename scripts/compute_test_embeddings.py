@@ -44,6 +44,9 @@ def main():
     transformers_logger = logging.getLogger('transformers')
     transformers_logger.setLevel(getattr(logging, LOGLEVEL))
     transformers_logger.addHandler(fh)
+    ds_logger = logging.getLogger('datasets')
+    ds_logger.setLevel(getattr(logging, LOGLEVEL))
+    ds_logger.addHandler(fh)
 
 
     # Load parameters from DVC
@@ -72,6 +75,8 @@ def main():
 
     # keep only extremes in dataset to get a better uniform score
     dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique'])#.select(range(1000))
+    dataset.save_to_disk('./tmp/test_embeddings')
+    dataset = load_from_disk('./tmp/test_embeddings')
     logger.info(f"Keeping only extreme cluster and unique sequences. New size: {dataset}")
 
     # preprocess data with tokenizer
@@ -79,6 +84,8 @@ def main():
         out = ' '.join(string)
         out = re.sub(r"[UZOB]", "X", out)
         return out
+
+    loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
     def process_batch(batch):
         in_col, out_col = 'meso_seq', 'thermo_seq'
 
@@ -98,7 +105,7 @@ def main():
             outputs = MODEL(
                 input_ids= input_ids,
                 attention_mask=attention_mask,
-                decoder_input_ids=decoder_input_ids,
+                labels=decoder_input_ids,
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict=True)
@@ -109,6 +116,7 @@ def main():
         batch["decoder_attentions"] = outputs.decoder_attentions[-1].cpu().numpy()
         batch["cross_attentions"] = outputs.cross_attentions[-1].cpu().numpy()
         batch['logits'] = outputs.logits.cpu().numpy()
+        batch['token_mean_loss'] = loss_fct(input=outputs.logits.view(-1, MODEL.config.vocab_size), target=decoder_input_ids.view(-1)).mean().reshape(-1,1)
 
         return batch
     dataset.set_format(type='torch')
@@ -122,17 +130,18 @@ def main():
 
     # collate data into batches for generation
     MODEL = MODEL.cuda()
-        
+
     first_batch_dict = dataset.select(range(1)).to_dict()
     output_dict = process_batch(first_batch_dict)
 
     # generate embeddings and attentions
     logger.info(f"Generating embeddings and attentions.")
-    dataset = dataset.map(process_batch, batched=True, batch_size=1, load_from_cache_file=True, desc='Generating embeddings and attentions')
+    dataset = dataset.map(process_batch, batched=True, batch_size=1, desc='Generating embeddings and attentions')
 
     # save to new disk location
     logger.info(f"Saving to disk.")
     dataset.save_to_disk('./data/nomelt-model/test_embeddings')
+    dataset.cleanup_cache_files()
         
     try:
         tracker.stop()

@@ -147,7 +147,7 @@ if __name__ == '__main__':
     transformers_logger.addHandler(fh)
 
     tracker = codecarbon.OfflineEmissionsTracker(
-        project_name="enh1_translate_optimize",
+        project_name="structure",
         output_dir="./data/",
         country_iso_code="USA",
         region="washington"
@@ -173,6 +173,9 @@ if __name__ == '__main__':
 
     logger.info(f"Have pids for thermophilic sequences. Found {len(thermo_pids_map)} out of {len(seqs)}")
 
+    # get rid of examples that we couldn't find structures
+    predictions = predictions[predictions['thermo'].isin(thermo_pids_map.keys())]
+
     # query alphafold for pdb structures for each thermo sequence
     # download the structures to file
     if not os.path.exists('./tmp/alphafold_downloads/'):
@@ -187,10 +190,16 @@ if __name__ == '__main__':
         if response.ok:
             with open(filename, 'wb') as f:
                 f.write(response.content)
-        logger.info(f"Downloaded {filename}")
+        else:
+            logger.warning(f"Could not download {filename}")
+        logger.info(f"Done with {filename}")
         time.sleep(1)
     thermo_structures_list = [f'./tmp/alphafold_downloads/{thermo_pids_map[seq]}.pdb' for seq in predictions['thermo']]
-    logger.info(f"Have all thermo structures: {thermo_structures_list}")
+    predictions['thermo_pdbs'] = thermo_structures_list
+    # make sure each file exists, if not, remove the row
+    predictions = predictions[predictions['thermo_pdbs'].apply(lambda x: os.path.exists(x))]
+
+    logger.info(f"Have thermo structures for {len(predictions)} examples")
 
     # predict structures for generated sequences with esmfold
     logger.info("Predicting structures for generated sequences with esmfold")

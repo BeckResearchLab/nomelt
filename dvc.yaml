@@ -171,6 +171,15 @@ stages:
       - ./data/dataset/
       - ./data/nomelt-model/model/
   # compare generated to thermophilic structures
+  compare_sequence_alignment:
+    wdir: ./
+    cmd: python scripts/compare_sequence_alignment.py
+    deps:
+      - ./scripts/compare_sequence_alignment.py
+      - ./data/nomelt-model/predictions.tsv
+    outs:
+      - ./data/nomelt-model/sequence_alignment.csv:
+          cache: false
   compare_structure:
     wdir: ./
     cmd: python scripts/compare_structure.py
