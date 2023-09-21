@@ -56,9 +56,6 @@ def main():
     # load the parameters from file
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
-
-    if not os.path.exists('./data/enh/optimize_enh1/'):
-        os.makedirs('./data/enh/optimize_enh1/')
     
     # get estimator class
     estimator_class = getattr(nomelt.thermo_estimation, params['optimize']['estimator'])
@@ -88,8 +85,8 @@ def main():
     # load sequences from dataset
     df = pd.read_csv('./data/nomelt-model/predictions.tsv', header=None, sep='\t')
     meso_sequences = df[0][:N_PAIRS]
-    thermo_sequences = df[1][:N_PAIRS]
-    trans_sequences = df[2][:N_PAIRS]
+    thermo_sequences = df[2][:N_PAIRS]
+    trans_sequences = df[1][:N_PAIRS]
     meso_sequences = [''.join(s.split()) for s in meso_sequences]
     thermo_sequences = [''.join(s.split()) for s in thermo_sequences]
     trans_sequences = [''.join(s.split()) for s in trans_sequences]
