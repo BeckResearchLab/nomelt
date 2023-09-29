@@ -281,21 +281,21 @@ stages:
       md5: 2a4bc8d1786a7ebb379c14915363c8af
       size: 54
   data_estimator_distribution:
-    cmd: python scripts/proof_of_principle/data_estimator_distribution.py
+    cmd: python scripts/data_estimator_distribution.py
     deps:
     - path: ./data/nomelt-model/predictions.tsv
       hash: md5
       md5: 737859368ef694edaf70544e9c87a65a
       size: 1155256
-    - path: ./scripts/proof_of_principle/data_estimator_distribution.py
+    - path: ./scripts/data_estimator_distribution.py
       hash: md5
-      md5: e8d805651dd8f8d87e8deb04ae9f9424
-      size: 5021
+      md5: df5dbeedda8b207fc24283fd64b06977
+      size: 4896
     outs:
-    - path: ./data/proof_of_principle/training_data_estimated.json
+    - path: ./data/thermo_gen_estimated.json
       hash: md5
-      md5: 2b77af5e7cb3e502084a8f630fa07b47
-      size: 7352
+      md5: 3a852210f275025ef7264f3303b24df6
+      size: 12258
   enh1_vs_consensus_in_silico_estimator:
     cmd: python scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
     deps:
@@ -341,9 +341,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 7c0a4fb64a2c5c79ce84214dfe64cfd5.dir
-      size: 830252020
-      nfiles: 13
+      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
+      size: 829652740
+      nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -386,9 +386,9 @@ stages:
     deps:
     - path: ./data/dataset
       hash: md5
-      md5: 7c0a4fb64a2c5c79ce84214dfe64cfd5.dir
-      size: 830252020
-      nfiles: 13
+      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
+      size: 829652740
+      nfiles: 11
     - path: ./scripts/proof_of_principle/natural_diversity_entropy.py
       hash: md5
       md5: 0ed48ea4bd3e02b45d464788e6138d6a
