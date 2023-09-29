@@ -189,18 +189,19 @@ stages:
     outs:
       - ./data/nomelt-model/structure_metrics.json:
           cache: false
-# proof of principle scripts
-#################################
 # call the af2dg thermostability estimator on a sample of data and save the scores
   data_estimator_distribution:
     wdir: ./
-    cmd: python scripts/proof_of_principle/data_estimator_distribution.py
+    cmd: python scripts/data_estimator_distribution.py
     deps:
       - ./data/nomelt-model/predictions.tsv
-      - ./scripts/proof_of_principle/data_estimator_distribution.py
+      - ./scripts/data_estimator_distribution.py
     outs:
-     - ./data/proof_of_principle/training_data_estimated.json:
+     - ./data/thermo_gen_estimated.json:
          cache: false
+# proof of principle scripts
+#################################
+
 # natural log loss
   natural_diversity_entropy:
     wdir: ./
