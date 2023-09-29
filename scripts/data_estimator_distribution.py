@@ -26,7 +26,7 @@ else:
 LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
-N_PAIRS = 30
+N_PAIRS = 50
 
 def main():
     # start logger
@@ -40,7 +40,7 @@ def main():
     utils_logger.addHandler(fh)
 
     tracker = codecarbon.OfflineEmissionsTracker(
-        project_name="training_data_estimation",
+        project_name="data_estimator_distribution",
         output_dir="./data/",
         country_iso_code="USA",
         region="washington"
@@ -49,7 +49,7 @@ def main():
 
     # start a dask cluster
     N_GPUS = torch.cuda.device_count()
-    cluster = LocalCUDACluster(n_workers=1, threads_per_worker=1)
+    cluster = LocalCUDACluster(n_workers=7, threads_per_worker=1)
     client = Client(cluster)
     logger.info(f"Starting cluster with config: {cluster.__dict__}")
 
@@ -118,7 +118,7 @@ def main():
 
     logger.info(f"Complete estimator for {N_PAIRS} pairs.")
     # save the results
-    with open(f'./data/proof_of_principle/training_data_estimated.json', 'w') as f:
+    with open(f'./data/thermo_gen_estimated.json', 'w') as f:
         json.dump(results, f, indent=4)
     tracker.stop()
 
