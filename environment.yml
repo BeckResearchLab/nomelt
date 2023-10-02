@@ -4,6 +4,7 @@ channels:
   - nvidia
   - conda-forge
   - defaults
+  - bioconda
 dependencies:
   - dvc
   - dask
@@ -23,6 +24,7 @@ dependencies:
   - datasets
   - clustalw
   - mdanalysis
+  # - blast
   - pip
   - pip:
     - duckdb==0.7.1
@@ -47,5 +49,4 @@ dependencies:
     - pydssp
     - dask
     - dask-cuda
-    - clustalo
 
