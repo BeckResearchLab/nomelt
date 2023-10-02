@@ -33,9 +33,9 @@ stages:
       size: 93
     - path: ./data/dataset/
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
+      size: 829966708
+      nfiles: 14
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
@@ -46,9 +46,9 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
+      size: 829966708
+      nfiles: 14
     - path: ./scripts/train.py
       hash: md5
       md5: cf8239e8d457e8111577e9ae4fc7fb16
@@ -140,9 +140,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
+      size: 829966708
+      nfiles: 14
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -341,9 +341,9 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
+      size: 829966708
+      nfiles: 14
     - path: ./data/nomelt-model/model/
       hash: md5
       md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
@@ -386,9 +386,9 @@ stages:
     deps:
     - path: ./data/dataset
       hash: md5
-      md5: be46e5f5c141dbba9a0d37ab5e37ae60.dir
-      size: 829652740
-      nfiles: 11
+      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
+      size: 829966708
+      nfiles: 14
     - path: ./scripts/proof_of_principle/natural_diversity_entropy.py
       hash: md5
       md5: 0ed48ea4bd3e02b45d464788e6138d6a
@@ -430,3 +430,15 @@ stages:
       hash: md5
       md5: 8caaf7e98cce76eba0fbd7ee6f96bf8c
       size: 115
+  enh1_in_training_set:
+    cmd: python scripts/proof_of_principle/enh1_check_training_set.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_check_training_set.py
+      hash: md5
+      md5: 1aa71410ba4633683710a6367bec4911
+      size: 678
+    outs:
+    - path: ./data/enh/training_data_homologs.json
+      hash: md5
+      md5: f93e89dba11ccadc4caefb3b390b2ba0
+      size: 73
