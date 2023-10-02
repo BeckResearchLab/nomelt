@@ -151,18 +151,18 @@ stages:
       - ./data/enh/optimize_enh1_results.json:
           cache: false
 # estimate the DNA binding of the enh1 variant proposed by the model as well as the optimization process
-  trans_binding:
-    wdir: ./
-    cmd: python scripts/dna_binding_alignment.py
-    deps:
-      - ./scripts/dna_binding_alignment.py
-      - ./data/enh/optimize_enh1_results.json
-      - ./data/enh/initial_estimate/
-      - ./data/enh/optimize_enh1/
-    outs:
-      - ./data/enh/enh1_vs_consensus_dna_binding.json:
-          cache: false
-      - ./data/enh/trans_binding/
+  # trans_binding:
+  #   wdir: ./
+  #   cmd: python scripts/dna_binding_alignment.py
+  #   deps:
+  #     - ./scripts/dna_binding_alignment.py
+  #     - ./data/enh/optimize_enh1_results.json
+  #     - ./data/enh/initial_estimate/
+  #     - ./data/enh/optimize_enh1/
+  #   outs:
+  #     - ./data/enh/enh1_vs_consensus_dna_binding.json:
+  #         cache: false
+  #     - ./data/enh/trans_binding/
   compute_test_embeddings:
     wdir: ./
     cmd: python scripts/compute_test_embeddings.py
