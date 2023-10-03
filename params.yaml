@@ -2,10 +2,12 @@ data:
   min_thermo_temp: 65.0
   min_temp_diff: 35.0
   min_align_cov: 0.95
-  kgram: 4
-  minhash_threshold: 0.2
-  minhash_num_perm: 128
-  keep_only_extremes: false
+  cd_c: 0.5
+  cd_n: 3
+  cd_aL: 0.9
+  cd_aS: 0.9
+  cd_G: 1
+  cd_s: 0.85
   test_size: 0.1
   dev_sample_data: false
 model:
@@ -17,7 +19,7 @@ model:
   generation_max_length: 250
   generation_num_beams: 10
 training:
-  keep_only_extremes: false # equivalent to data.keep_only_extremes, except the filtering happens before train time instead of in creating the saved dataset
+  reweight: false # whether to weight the loss function by the number of sequences in each cluster
   epochs: 3
   early_stopping: true
   early_stopping_patience: 4
@@ -39,6 +41,8 @@ training:
     - 'abs({seq_len_diff})/{meso_seq_len} < 0.08'
   max_eval_examples: 10000    # only during training
   dev_sample_data: null
+testing:
+  only_one_from_cluster: true
 optimize:
   estimator: mAFminDGEstimator
   estimator_args: 
