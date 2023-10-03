@@ -37,7 +37,7 @@ stages:
       - model.task
       - model.generation_max_length
       - model.model_hyperparams
-      - training.keep_only_extremes
+      - training.reweight
       - training.dev_sample_data
       - training.per_device_batch_size
       - training.gradient_accumulation
