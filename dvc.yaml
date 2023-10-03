@@ -11,10 +11,12 @@ stages:
       - data.min_temp_diff
       - data.min_thermo_temp
       - data.min_align_cov
-      - data.kgram
-      - data.minhash_threshold
-      - data.minhash_num_perm
-      - data.keep_only_extremes
+      - data.cd_c
+      - data.cd_aL
+      - data.cd_aS
+      - data.cd_G
+      - data.cd_s
+      - data.cd_n
       - data.test_size
       - data.dev_sample_data
     outs:

@@ -24,6 +24,7 @@ dependencies:
   - datasets
   - clustalw
   - mdanalysis
+  - cd-hit
   # - blast
   - pip
   - pip:

@@ -3,6 +3,7 @@
 import os
 import pickle
 import time
+import subprocess
 from yaml import safe_load as yaml_load
 from yaml import dump as yaml_dump
 import json
@@ -84,6 +85,51 @@ def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
         pickle.dump((min_temp_diff, min_thermo_temp, min_align_cov), f)
     return dataset
 
+def run_cdhit(i, o, c=0.9, n=5, G=1, M=800, T=1, s=0.0, aL=0.0, aS=0.0):
+    """
+    Run CD-HIT with specified parameters.
+
+    Parameters:
+        i (str): Input filename in FASTA format.
+        o (str): Output filename.
+        c (float, optional): Sequence identity threshold. Default is 0.9.
+        n (int, optional): Word length. Default is 5.
+        G (int, optional): Use global sequence identity (1) or not (0). Default is 1.
+        M (int, optional): Memory limit in MB. Default is 800.
+        T (int, optional): Number of threads. Default is 1.
+        s (float, optional): Length difference cutoff. Default is 0.0.
+        aL (float, optional): Alignment coverage for the longer sequence. Default is 0.0.
+        aS (float, optional): Alignment coverage for the shorter sequence. Default is 0.0.
+    """
+    cmd = [
+        'cd-hit',
+        '-i', i,
+        '-o', o,
+        '-c', str(c),
+        '-n', str(n),
+        '-G', str(G),
+        '-M', str(M),
+        '-T', str(T),
+        '-s', str(s),
+        '-aL', str(aL),
+        '-aS', str(aS)
+    ]
+    subprocess.run(cmd)
+
+def parse_clstr(clstr_file):
+    cluster_dict = {}
+    current_cluster = None
+
+    with open(clstr_file, 'r') as f:
+        for line in f:
+            if line.startswith(">Cluster"):
+                current_cluster = line.strip().split()[-1]
+            else:
+                seq_id = line.split('>')[1].split('...')[0]
+                cluster_dict[int(seq_id)] = int(current_cluster)
+
+    return cluster_dict
+
 if __name__ == '__main__':
     # start logger
     logger.setLevel(getattr(logging, LOGLEVEL))
@@ -125,41 +171,42 @@ if __name__ == '__main__':
         return examples
     ds = ds.map(add_index, with_indices=True, batched=True)
 
-    # remove similar pairs
-    logger.info(f"Removing similar pairs based on meso seq kgrams.")
-    duplicate_clusters, cluster_summary, duplicate_indices, extreme_indices = nomelt.deduplication.deduplicate_dataset(
-        ds,
-        sequence_key='meso_seq',
-        jaccard_threshold=params['data']['minhash_threshold'],
-        num_perm=params['data']['minhash_num_perm'],
-        k=params['data']['kgram'])
+    # label clusters
+    logger.info('Labeling clusters using CD-HIT')
+    # Prepare FASTA file from ds
+    with open("./tmp/cd_hit_input.fasta", "w") as f:
+        for idx, item in enumerate(ds):
+            f.write(f">{idx}\n{item['meso_seq']}\n")
 
-    # remove duplicate proteins that are not extremes, if specified
-    if params['data']['keep_only_extremes']:
-        logger.info(f"Removing non-extreme duplicates.")
-        remove_indices = duplicate_indices - extreme_indices
-        ds = ds.filter(lambda x, idx: idx not in remove_indices, with_indices=True)
-        logger.info(f"Removed {len(remove_indices)} non-extreme duplicates, {len(ds)} pairs remaining.")
-    # split data keeping clusters together
-    logger.info(f"Splitting data into train and test by cluster")
-    def add_cluster_column(example):
-        """We want to assign the cluster id here if it is in a cluster, otherwise keep the indexes.
-        Note, since indexes start at 0 and increment up, cluster ids will be negative to not overlap.
-        """
-        if example['index'] in duplicate_indices:
-            for cluster_id, cluster_dict in duplicate_clusters.items():
-                if example['index'] in cluster_dict['ids']:
-                    example['cluster'] = -cluster_id
-                    if example['index'] in cluster_dict['extreme_ids']:
-                        example['status_in_cluster'] = 'extreme'
-                    else:
-                        example['status_in_cluster'] = 'duplicate'
-                    break
-        else:
-            example['cluster'] = example['index']
-            example['status_in_cluster'] = 'unique'
+    # Run CD-HIT
+    t0 = time.time()
+    run_cdhit(
+        "./tmp/cd_hit_input.fasta",
+        "./tmp/cd_hit_output.fasta",
+        M=40000,
+        T=CPU_COUNT,
+        c=params['data']['cd_c'],
+        n=params['data']['cd_n'],
+        G=params['data']['cd_G'],
+        s=params['data']['cd_s'],
+        aL=params['data']['cd_aL'],
+        aS=params['data']['cd_aS']
+    )
+
+    # Parse CD-HIT output
+    logger.info('Parsing CD-HIT output')
+    clusters = parse_clstr("./tmp/cd_hit_output.fasta.clstr")
+    t1 = time.time()
+    logger.info(f"Minutes elapsed: {(t1-t0)/60}")
+
+    # Add CD-HIT cluster IDs to ds
+    def add_cdhit_cluster(example, idx):
+        example['cluster'] = clusters.get(idx, -1)
         return example
-    ds = ds.map(add_cluster_column, batched=False, num_proc=CPU_COUNT)
+
+    logger.info('Adding CD-HIT cluster IDs to dataset')
+    ds = ds.map(add_cdhit_cluster, with_indices=True, batched=False, num_proc=CPU_COUNT)
+    
     # group shuffle splitter to keep clusters together
     group_shuffle_splitter = sklearn.model_selection.GroupShuffleSplit(
         n_splits=1, train_size=1-params['data']['test_size'])
