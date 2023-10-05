@@ -13,7 +13,7 @@ stages:
       size: 13055
     - path: ./scripts/prepare_data.py
       hash: md5
-      md5: 6f9fbd4dc4873f5c3ebbe16c070f5348
+      md5: ae620b9ba3cd473d387c7fe095b223f6
       size: 9189
     params:
       params.yaml:
@@ -29,13 +29,13 @@ stages:
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 3c1b1ad0f9855842eb8789f8e642a046
+      md5: f71cce948f75c27619282f1767a742ab
       size: 92
     - path: ./data/dataset/
       hash: md5
-      md5: d751713988987e9331980363e24189ce.dir
-      size: 0
-      nfiles: 0
+      md5: 435eed3dd26d63e6add991caa81618bd.dir
+      size: 809057166
+      nfiles: 11
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
