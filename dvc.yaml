@@ -11,12 +11,7 @@ stages:
       - data.min_temp_diff
       - data.min_thermo_temp
       - data.min_align_cov
-      - data.cd_c
-      - data.cd_aL
-      - data.cd_aS
-      - data.cd_G
-      - data.cd_s
-      - data.cd_n
+      - data.mmseq_params
       - data.test_size
       - data.dev_sample_data
     outs:
@@ -42,7 +37,8 @@ stages:
       - training.per_device_batch_size
       - training.gradient_accumulation
       - training.auto_find_batch_size
-      - training.saves_per_epoch
+      - training.evals_per_save
+      - training.evals_per_epoch
       - training.epochs
       - training.gradient_checkpointing
       - training.learning_rate

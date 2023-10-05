@@ -13,30 +13,28 @@ stages:
       size: 13055
     - path: ./scripts/prepare_data.py
       hash: md5
-      md5: d412f57eec783c5fde8394a4ac0f494a
-      size: 8961
+      md5: 7f2dcba728f8cf334b07ea01eb1f01ce
+      size: 8930
     params:
       params.yaml:
-        data.cd_G: 1
-        data.cd_aL: 0.9
-        data.cd_aS: 0.9
-        data.cd_c: 0.5
-        data.cd_n: 3
-        data.cd_s: 0.85
         data.dev_sample_data: false
         data.min_align_cov: 0.95
         data.min_temp_diff: 35.0
         data.min_thermo_temp: 65.0
+        data.mmseq_params:
+          coverage: 0.9
+          min-seq-id: 0.3
+          cluster-mode: 1
         data.test_size: 0.1
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 064a0881882f5b34e1efdba9c07eeb6d
-      size: 91
+      md5: 1e5b784f7a8fb544a6f6c50975f72858
+      size: 92
     - path: ./data/dataset/
       hash: md5
-      md5: 0f96909a7be4bc33a1916f0b85e636ea.dir
-      size: 809056951
+      md5: 6af7a1202a6f0151157c6e9b95691aa4.dir
+      size: 809056334
       nfiles: 11
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
@@ -48,13 +46,13 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: c3ecd0b475db433225b23e2df0ab64e4.dir
-      size: 829966708
-      nfiles: 14
+      md5: d8c06c1c94279fb6ed3a5a4dba992507.dir
+      size: 890719503
+      nfiles: 36
     - path: ./scripts/train.py
       hash: md5
-      md5: cf8239e8d457e8111577e9ae4fc7fb16
-      size: 12135
+      md5: 49407d123756368f6dd19f89f5daafe0
+      size: 13924
     params:
       params.yaml:
         model.generation_max_length: 250
@@ -67,48 +65,48 @@ stages:
         - abs({seq_len_diff})/{meso_seq_len} < 0.08
         training.auto_find_batch_size: false
         training.bf16: true
-        training.dev_sample_data:
-        training.early_stopping: true
+        training.dev_sample_data: 1000
+        training.early_stopping: false
         training.early_stopping_patience: 4
         training.early_stopping_threshold: 0.1
         training.epochs: 3
         training.fp16: false
         training.gradient_accumulation: 2
         training.gradient_checkpointing: true
-        training.keep_only_extremes: false
-        training.label_smoothing_factor: 0.0
+        training.label_smoothing_factor: 0.01
         training.learning_rate: 0.0001
         training.lr_scheduler_type: linear
-        training.max_eval_examples: 10000
+        training.max_eval_examples: 5000
         training.optim: adamw_hf
         training.optim_args:
-        training.per_device_batch_size: 140
-        training.saves_per_epoch: 10
+        training.per_device_batch_size: 20
+        training.reweight: true
+        training.saves_per_epoch:
         training.warmup_ratio: 0.1
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: 1bb360181f4f5e0953fb6f8162d3fba0
-      size: 393
+      md5: 6c378afaeaaa390f23772fa0d32c2322
+      size: 227
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: 07939accc8b6d545c65f08f002780011.dir
-      size: 20617
-      nfiles: 11
+      md5: e81aec0ddb5521f42e7496c2fe23f047.dir
+      size: 481
+      nfiles: 7
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: bad0a7484a13c623775ba37f6d6b032e
-      size: 1281
+      md5: a0662ada01e362113b23067516c714ce
+      size: 796
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: f1a9db415ade823229fd35e866885965.dir
-      size: 231255
-      nfiles: 11
+      md5: 5e2ae1942104d5defb356f07f44d021a.dir
+      size: 124223
+      nfiles: 7
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 44bd1f10d7bc1b9e50ac2f4bdc10e7f9.dir
-      size: 321368839764
-      nfiles: 257
+      md5: cb83b63b261325b60cc2e8515d9f5c01.dir
+      size: 321368861341
+      nfiles: 258
   score_model:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
       scripts/score_model.py
