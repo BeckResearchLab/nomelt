@@ -33,9 +33,9 @@ stages:
       size: 92
     - path: ./data/dataset/
       hash: md5
-      md5: 6af7a1202a6f0151157c6e9b95691aa4.dir
-      size: 809056334
-      nfiles: 11
+      md5: 65ec03e9e60ea68bb74b9421ac5dd942.dir
+      size: 1167006286
+      nfiles: 36
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
