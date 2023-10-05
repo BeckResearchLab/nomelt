@@ -1,6 +1,7 @@
 """Prepare protein sequence pairs as a HF dataset
 """
 import os
+import shutil
 import pickle
 import time
 import subprocess
@@ -85,49 +86,54 @@ def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
         pickle.dump((min_temp_diff, min_thermo_temp, min_align_cov), f)
     return dataset
 
-def run_cdhit(i, o, c=0.9, n=5, G=1, M=800, T=1, s=0.0, aL=0.0, aS=0.0):
-    """
-    Run CD-HIT with specified parameters.
+def run_mmseqs_command(cmd):
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        logger.error(f"MMseqs2 command failed with error: {e.stderr}")
+        raise e
 
-    Parameters:
-        i (str): Input filename in FASTA format.
-        o (str): Output filename.
-        c (float, optional): Sequence identity threshold. Default is 0.9.
-        n (int, optional): Word length. Default is 5.
-        G (int, optional): Use global sequence identity (1) or not (0). Default is 1.
-        M (int, optional): Memory limit in MB. Default is 800.
-        T (int, optional): Number of threads. Default is 1.
-        s (float, optional): Length difference cutoff. Default is 0.0.
-        aL (float, optional): Alignment coverage for the longer sequence. Default is 0.0.
-        aS (float, optional): Alignment coverage for the shorter sequence. Default is 0.0.
-    """
-    cmd = [
-        'cd-hit',
-        '-i', i,
-        '-o', o,
-        '-c', str(c),
-        '-n', str(n),
-        '-G', str(G),
-        '-M', str(M),
-        '-T', str(T),
-        '-s', str(s),
-        '-aL', str(aL),
-        '-aS', str(aS)
-    ]
-    subprocess.run(cmd)
 
-def parse_clstr(clstr_file):
-    cluster_dict = {}
-    current_cluster = None
+def run_mmseq(input_fasta, output_dir, params):
+    # Database creation
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    else:
+        # delete existing database and remake
+        shutil.rmtree(output_dir)
+        os.makedirs(output_dir)
+    db_name = os.path.join(output_dir, "mmseq_db")
+    run_mmseqs_command(["mmseqs", "createdb", input_fasta, db_name])
 
-    with open(clstr_file, 'r') as f:
-        for line in f:
-            if line.startswith(">Cluster"):
-                current_cluster = line.strip().split()[-1]
-            else:
-                seq_id = line.split('>')[1].split('...')[0]
-                cluster_dict[int(seq_id)] = int(current_cluster)
+    # Clustering
+    cluster_out = os.path.join(output_dir, "mmseq_clu")
+    tmp_dir = os.path.join(output_dir, "tmp")
+    os.makedirs(tmp_dir, exist_ok=True)
+    run_mmseqs_command(["mmseqs", "cluster", db_name, cluster_out, tmp_dir, 
+                        "--min-seq-id", str(params['min-seq-id']),
+                        "-c", str(params['coverage']),
+                        "--cov-mode", str(0),
+                        "--cluster-mode", str(params['cluster-mode']), "--threads", "32"])
 
+    # Convert to TSV
+    tsv_out = os.path.join(output_dir, "mmseq_clu.tsv")
+    run_mmseqs_command(["mmseqs", "createtsv", db_name, db_name, cluster_out, tsv_out])
+
+    # Extract sequences
+    seq_out = os.path.join(output_dir, "mmseq_clu_seq")
+    run_mmseqs_command(["mmseqs", "createseqfiledb", db_name, cluster_out, seq_out])
+
+    # Convert results to flat format
+    fasta_out = os.path.join(output_dir, "mmseq_clu_seq.fasta")
+    run_mmseqs_command(["mmseqs", "result2flat", db_name, db_name, seq_out, fasta_out])
+    
+    return tsv_out, fasta_out
+
+def parse_mmseq(file):
+    results = pd.read_csv(file, sep='\t', header=None)
+    results.columns = ['clust', 'member']
+    cluster_dict = results.set_index('member')['clust'].to_dict()
     return cluster_dict
 
 if __name__ == '__main__':
@@ -172,39 +178,33 @@ if __name__ == '__main__':
     ds = ds.map(add_index, with_indices=True, batched=True)
 
     # label clusters
-    logger.info('Labeling clusters using CD-HIT')
+    logger.info('Labeling clusters using mmseqs')
     # Prepare FASTA file from ds
-    with open("./tmp/cd_hit_input.fasta", "w") as f:
+    with open("./tmp/mmseqs_input.fasta", "w") as f:
         for idx, item in enumerate(ds):
             f.write(f">{idx}\n{item['meso_seq']}\n")
 
-    # Run CD-HIT
+    # Run mmseq
+    mmseq_params = params['data']['mmseq_params']
     t0 = time.time()
-    run_cdhit(
-        "./tmp/cd_hit_input.fasta",
-        "./tmp/cd_hit_output.fasta",
-        M=40000,
-        T=CPU_COUNT,
-        c=params['data']['cd_c'],
-        n=params['data']['cd_n'],
-        G=params['data']['cd_G'],
-        s=params['data']['cd_s'],
-        aL=params['data']['cd_aL'],
-        aS=params['data']['cd_aS']
+    tsv_out, fasta_out = run_mmseq(
+        "./tmp/mmseqs_input.fasta",
+        "./tmp/mmseqs_outs",
+        mmseq_params
     )
 
-    # Parse CD-HIT output
-    logger.info('Parsing CD-HIT output')
-    clusters = parse_clstr("./tmp/cd_hit_output.fasta.clstr")
+    # Parse mmseq output
+    logger.info('Parsing mmseq output')
+    clusters = parse_mmseq(tsv_out)
     t1 = time.time()
     logger.info(f"Minutes elapsed: {(t1-t0)/60}")
 
-    # Add CD-HIT cluster IDs to ds
+    # Add mmseq cluster IDs to ds
     def add_cdhit_cluster(example, idx):
         example['cluster'] = clusters.get(idx, -1)
         return example
 
-    logger.info('Adding CD-HIT cluster IDs to dataset')
+    logger.info('Adding mmseq cluster IDs to dataset')
     ds = ds.map(add_cdhit_cluster, with_indices=True, batched=False, num_proc=CPU_COUNT)
     
     # group shuffle splitter to keep clusters together
@@ -223,14 +223,11 @@ if __name__ == '__main__':
     logger.info(f"""SPLITTING REPORT
 -------------------
 Train size: {len(train)}
-Train clusters: {[c for c in set(train['cluster']) if c<0]}
-Train fraction of examples in clusters: {sum(np.array(train['cluster']) < 0)/len(train)}
+Train clusters: {[c for c in set(train['cluster'])]}
 Eval size: {len(eval)}
-Eval clusters: {[c for c in set(eval['cluster']) if c<0]}
-Eval fraction of examples in clusters: {sum(np.array(eval['cluster']) < 0)/len(eval)}
+Eval clusters: {[c for c in set(eval['cluster'])]}
 Test size: {len(test)}
-Test clusters: {[c for c in set(test['cluster']) if c<0]}
-Test fraction of examples in clusters: {sum(np.array(test['cluster']) < 0)/len(test)}
+Test clusters: {[c for c in set(test['cluster'])]}
 """)
     data_dict = datasets.DatasetDict({'train': train, 'eval': eval, 'test': test})
 
