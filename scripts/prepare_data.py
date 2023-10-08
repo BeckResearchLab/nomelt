@@ -113,7 +113,7 @@ def run_mmseq(input_fasta, output_dir, params):
     run_mmseqs_command(["mmseqs", "cluster", db_name, cluster_out, tmp_dir, 
                         "--min-seq-id", str(params['min-seq-id']),
                         "-c", str(params['coverage']),
-                        "--cov-mode", str(0),
+                        "--cov-mode", str(0), "--similarity-type", str(params['similarity-type']), '-e', str(params['e']),
                         "--cluster-mode", str(params['cluster-mode']), "--threads", "32"])
 
     # Convert to TSV
@@ -177,12 +177,22 @@ if __name__ == '__main__':
         return examples
     ds = ds.map(add_index, with_indices=True, batched=True)
 
+    # first get a mapping of identical sequences to their indices
+    logger.info('Finding identical sequences')
+    unique_seqs = tuple(set(ds['meso_seq']))
+    unique_seq_dict = {hash(seq): seq for seq in unique_seqs}
+    logger.info(f"Found {len(unique_seqs)} unique sequences.")
+    def add_unique_seq_hash(example):
+        example['unique_seq_hash'] = hash(example['meso_seq'])
+        return example
+    ds = ds.map(add_unique_seq_hash, batched=False, num_proc=CPU_COUNT, desc='Adding unique seq index')
+
     # label clusters
     logger.info('Labeling clusters using mmseqs')
     # Prepare FASTA file from ds
     with open("./tmp/mmseqs_input.fasta", "w") as f:
-        for idx, item in enumerate(ds):
-            f.write(f">{idx}\n{item['meso_seq']}\n")
+        for idx, item in unique_seq_dict.items():
+            f.write(f">{idx}\n{item}\n")
 
     # Run mmseq
     mmseq_params = params['data']['mmseq_params']
@@ -196,12 +206,15 @@ if __name__ == '__main__':
     # Parse mmseq output
     logger.info('Parsing mmseq output')
     clusters = parse_mmseq(tsv_out)
+    
     t1 = time.time()
     logger.info(f"Minutes elapsed: {(t1-t0)/60}")
 
     # Add mmseq cluster IDs to ds
     def add_cdhit_cluster(example, idx):
-        example['cluster'] = clusters.get(idx, -1)
+        unique_seq_hash = example['unique_seq_hash']
+
+        example['cluster'] = clusters[unique_seq_hash]
         return example
 
     logger.info('Adding mmseq cluster IDs to dataset')
@@ -232,8 +245,14 @@ Test clusters: {[c for c in set(test['cluster'])]}
     data_dict = datasets.DatasetDict({'train': train, 'eval': eval, 'test': test})
 
     logger.info(f'Final datasets: {data_dict}')
-    data_dict.cleanup_cache_files()
     data_dict.save_to_disk('./data/dataset/')
+    # data_dict.cleanup_cache_files()
+
+    # there is a weird bug where the dataset is not saved properly eg the dataset_dict.josn file is empty
+    # this is a hacky workaround
+    with open('./data/dataset/dataset_dict.json', 'w') as f:
+        f.write('{"splits": ["train", "eval", "test"]}')
+
     logger.info("Saved data to disk.")
     
     # get co2
