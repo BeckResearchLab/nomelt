@@ -19,6 +19,18 @@ stages:
     metrics:
       - ./data/data_metrics.yaml:
           cache: false
+  blast_test_train:
+    wdir: ./
+    cmd: python scripts/blast_test_train.py
+    deps:
+      - ./scripts/blast_test_train.py
+      - ./data/dataset/
+    metrics:
+      - ./data/test_train_blast_metrics.json:
+          cache: false
+    plots:
+      - ./data/plots/test_train_blast_hist.png:
+          cache: false
 # train model
   train:
     wdir: ./
