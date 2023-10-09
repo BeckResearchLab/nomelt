@@ -36,13 +36,6 @@ else:
 LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
-global print_gpu_utilization
-def print_gpu_utilization(index):
-    nvmlInit()
-    handle = nvmlDeviceGetHandleByIndex(index)
-    info = nvmlDeviceGetMemoryInfo(handle)
-    print(f"GPU memory occupied: {info.used//1024**2} MB.")
-
 def get_custom_filter(filter_str):
     """Convert a string into a callable thatr can be used to filter data
     based on columns in the dataset.
@@ -59,6 +52,39 @@ def get_custom_filter(filter_str):
         return eval(condition)
     
     return custom_callable
+
+class WeightedSeq2SeqTrainer(Seq2SeqTrainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        """
+        Adding weights to the loss function.
+        """
+        # if weights, hijack the function
+        if 'weight' in inputs:
+            weights = inputs.pop('weight').view(-1,1) # should be shape (batch_size, 1)
+        else:
+            weights = torch.ones(inputs['labels'].shape[0], 1).to(inputs['labels'].device)
+        assert weights.shape == (inputs['labels'].shape[0], 1)
+        labels = inputs.pop('labels')
+        outputs = model(**inputs)
+        logits = outputs.logits
+        # tile weights to match label shape
+        weights = weights.repeat(1, labels.shape[1])
+        assert weights.shape == labels.shape
+        # mask weights 
+        weights = torch.where(labels == -100, 0, weights)
+        # compute loss
+        loss_fct = torch.nn.CrossEntropyLoss(reduction='none', ignore_index=-100, label_smoothing=self.args.label_smoothing_factor)
+        losses = loss_fct(logits.view(-1, logits.shape[-1]), labels.view(-1))
+        # weight losses
+        losses = losses * weights.view(-1)
+        loss = torch.sum(losses) / torch.sum(weights)
+
+        return (loss, outputs) if return_outputs else loss
+    
+    def _set_signature_columns_if_needed(self):
+        super()._set_signature_columns_if_needed()
+        if not 'weight' in self._signature_columns:
+            self._signature_columns.append('weight')
 
 def main():
     # start logger
@@ -108,9 +134,6 @@ def main():
     with accelerator.main_process_first():
         dataset = load_from_disk('./data/dataset/')
         logger.info(f"Loaded dataset. Train, eval, test size: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
-        if params['training']['keep_only_extremes']:
-            dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique'])
-            logger.info(f"Keeping only extreme cluster and unique sequences. New train, val, test size: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
 
         # apply additional filters
         if params['training']['additional_filters']:
@@ -132,6 +155,21 @@ def main():
             else:
                 dataset['test'] = dataset['test'].select(range(params['training']['dev_sample_data']))
             logger.info(f"Sampling {params['training']['dev_sample_data']} sequences from train and test sets. New train, test size: {(len(dataset['train']), len(dataset['test']))}")
+        if params['training']['reweight']:
+            # compute cluster sizes in train set and use to compute sample weight. A cluster with 1 sequence will have weight 1.
+            # first count the number of sequences in each cluster
+            cluster_sizes = {}
+            for ex in dataset['train']:
+                c = ex['cluster']
+                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+            # then compute the weight for each sequence
+            def do_one(ex):
+                c = ex['cluster']
+                ex['weight'] = 1/cluster_sizes[c]
+                return ex
+            dataset['train'] = dataset['train'].map(do_one, batched=False, desc='Computing sample weights')
+            logger.info(f"Compute sample weights: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
+        
         if params['training']['max_eval_examples'] < len(dataset['eval']):
             dataset['eval_sample'] = dataset['eval'].select(range(params['training']['max_eval_examples']))
             logger.info(f"Sampling {params['training']['max_eval_examples']} sequences from eval set. New eval size: {len(dataset['eval_sample'])}")
@@ -156,38 +194,45 @@ def main():
             out_seqs = [prepare_string(seq) for seq in examples[out_col]]
 
             # tokenize inputs and outputs
-            model_inputs = tokenizer(in_seqs, max_length=params['model']['generation_max_length'], padding='max_length', truncation=True)
-            labels = torch.tensor(tokenizer(out_seqs, max_length=params['model']['generation_max_length'], padding='max_length', truncation=True)['input_ids'])
+            model_inputs = tokenizer(in_seqs, max_length=params['model']['generation_max_length'], padding='longest', truncation=True)
+            labels = torch.tensor(tokenizer(out_seqs, max_length=params['model']['generation_max_length'], padding='longest', truncation=True)['input_ids'])
             # fill -100s to be ignored in loss
             labels = torch.where(labels == tokenizer.pad_token_id, -100, labels)
             model_inputs['labels'] = labels
+            # if there are weights, we have to 
+            if 'weight' in examples:
+                model_inputs['weight'] = examples['weight']
             return model_inputs
-        initial_columns = dataset['train'].column_names
-        print(initial_columns)
+        initial_columns = [c for c in dataset['train'].column_names if c != 'weight']
         logger.info(f"Tokenizing and preparing model inputs. Using task '{params['model']['task']}'. 'tranlsation' is meso to thermo, 'reconstruction' is meso to meso or thermo to thermo.")
         dataset = dataset.map(preprocess_dataset_to_model_inputs, batched=True, remove_columns=initial_columns, load_from_cache_file=True, desc='Tokenizing and preparing model inputs')
         # remove the unnecessary columns
-        dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
+        dataset.set_format(type='torch')
 
         # compute number of steps per save and evalution
         if torch.cuda.is_available():
             num_devices = torch.cuda.device_count()
         else:
             num_devices = 1
-        if params['training']['saves_per_epoch'] == None:
+        if params['training']['evals_per_epoch'] == None:
             save_strat = 'no'
+            steps_per_eval = None
             steps_per_save = None
             logger.info(f"Using {num_devices} devices. No saves per epoch.")
         else:
             save_strat='steps'
             step_size = params['training']['per_device_batch_size'] * params['training']['gradient_accumulation'] * num_devices
             steps_per_epoch = len(dataset['train']) / step_size
-            if params['training']['saves_per_epoch'] == 0:
-                params['training']['saves_per_epoch'] = 1
-            steps_per_save = (steps_per_epoch) // params['training']['saves_per_epoch']
+            if params['training']['evals_per_epoch'] == 0:
+                params['training']['evals_per_epoch'] = 1
+            steps_per_eval = (steps_per_epoch) // params['training']['evals_per_epoch']
+            if steps_per_eval == 0:
+                steps_per_eval = 1
+            steps_per_save = int(steps_per_eval * params['training']['evals_per_save'])
             if steps_per_save == 0:
                 steps_per_save = 1
-            logger.info(f"Using {num_devices} devices. Steps per epoch: {steps_per_epoch}. Steps per save: {steps_per_save}")
+            logger.info(f"Using {num_devices} devices. Steps per epoch: {steps_per_epoch}. Steps per eval: {steps_per_eval}, Steps per save: {steps_per_save}")
+
 
     # load the model with potentially custom config
     model_config = AutoConfig.from_pretrained(params['model']['pretrained_model'])
@@ -207,7 +252,7 @@ def main():
         do_train=True,
         do_eval=True,
         evaluation_strategy=save_strat,
-        eval_steps=steps_per_save,
+        eval_steps=steps_per_eval,
         prediction_loss_only=True,
         save_strategy=save_strat,
         save_steps=steps_per_save,
@@ -242,7 +287,9 @@ def main():
     del accelerator
 
     # get trainer going
-    trainer = Seq2SeqTrainer(
+    TrainerClass = WeightedSeq2SeqTrainer if params['training']['reweight'] else Seq2SeqTrainer
+
+    trainer = TrainerClass(
         model=model,
         args=args,
         train_dataset=dataset['train'],

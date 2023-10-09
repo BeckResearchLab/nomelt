@@ -3,9 +3,11 @@ data:
   min_temp_diff: 35.0
   min_align_cov: 0.95
   mmseq_params:
-    coverage: 0.9
-    min-seq-id: 0.3
+    coverage: 0.8
+    min-seq-id: 0.2
     cluster-mode: 1
+    similarity-type: 1
+    e: 1e-3
   test_size: 0.1
   dev_sample_data: false
 model:
@@ -39,7 +41,7 @@ training:
   additional_filters:
     - 'abs({seq_len_diff})/{meso_seq_len} < 0.08'
   max_eval_examples: 5000    # only during training
-  dev_sample_data: null
+  dev_sample_data: false
 testing:
   only_one_from_cluster: true
 optimize:
