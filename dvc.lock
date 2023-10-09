@@ -131,3 +131,30 @@ stages:
       md5: 0a7e1478be1ef88037da4c451afd3c13.dir
       size: 124037480969
       nfiles: 107
+  make_predictions:
+    cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
+      scripts/make_predictions.py
+    deps:
+    - path: ./data/dataset/
+      hash: md5
+      md5: 81a2c54576322e8d5998db00849ff6e0.dir
+      size: 830484443
+      nfiles: 18
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 0a7e1478be1ef88037da4c451afd3c13.dir
+      size: 124037480969
+      nfiles: 107
+    - path: ./scripts/make_predictions.py
+      hash: md5
+      md5: 200a2ca596f6a0a810b14bea3a78b05f
+      size: 8200
+    params:
+      params.yaml:
+        model.generation_max_length: 250
+        model.generation_num_beams: 10
+    outs:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 1272601acd644ec6b0ba762df6f05ace
+      size: 214718

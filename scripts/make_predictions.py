@@ -82,9 +82,17 @@ def main():
         dataset = load_from_disk('./data/dataset/')['test']
         logger.info(f"Loaded dataset.  {dataset}")
 
-        # keep only extremes in dataset to get a better uniform score
-        dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique']).select(range(1000))
-        logger.info(f"Keeping only extreme cluster and unique sequences. New size: {dataset}")
+        # keep only a single sequence from each cluster
+        # first mark the indexes of each
+        cluster_dict = {}
+        for i, clust in enumerate(dataset['cluster']):
+            cluster_dict[clust] = i
+        keep_indexes = set(cluster_dict.values())
+        dataset = dataset.filter(lambda x, idx: idx in keep_indexes, with_indices=True)
+        logger.info(f"Keeping only one seq from each cluster. New size: {dataset}")
+        if len(dataset) > 1000:
+            dataset = dataset.shuffle(seed=42).select(range(1000))
+            logger.info(f"Shuffled and selected 1000 sequences. New size: {dataset}")
 
         # preprocess data with tokenizer
         def prepare_string(string):
@@ -106,14 +114,14 @@ def main():
             out_seqs = [prepare_string(seq) for seq in examples[out_col]]
 
             # tokenize inputs and outputs
-            model_inputs = tokenizer(in_seqs, max_length=params['model']['generation_max_length'], padding='max_length', truncation=True)
-            labels = torch.tensor(tokenizer(out_seqs, max_length=params['model']['generation_max_length'], padding='max_length', truncation=True)['input_ids'])
+            model_inputs = tokenizer(in_seqs, max_length=params['model']['generation_max_length'], padding='longest', truncation=True)
+            labels = torch.tensor(tokenizer(out_seqs, max_length=params['model']['generation_max_length'], padding='longest', truncation=True)['input_ids'])
             # fill -100s to be ignored in loss
             labels = torch.where(labels == tokenizer.pad_token_id, -100, labels)
             model_inputs['labels'] = labels
             return model_inputs
         initial_columns = dataset.column_names
-        print(initial_columns)
+
         logger.info(f"Tokenizing and preparing model inputs. Using task '{params['model']['task']}'. 'tranlsation' is meso to thermo, 'reconstruction' is meso to meso or thermo to thermo.")
         dataset = dataset.map(preprocess_dataset_to_model_inputs, batched=True, remove_columns=initial_columns, load_from_cache_file=True, desc='Tokenizing and preparing model inputs')
         dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
@@ -124,6 +132,12 @@ def main():
         setattr(model_config, model_hyperparam, params['model']['model_hyperparams'][model_hyperparam])
     setattr(model_config, 'max_length', params['model']['generation_max_length'])
     MODEL = AutoModelForSeq2SeqLM.from_pretrained('./data/nomelt-model/model', config=model_config)
+
+    def decode_tensor(tensor):
+        output_tensor = torch.where(tensor != -100, tensor, tokenizer.pad_token_id)
+        generated_sequences = tokenizer.batch_decode(output_tensor, skip_special_tokens=True)
+        translated_sequences = [''.join(generated_sequence.split()) for generated_sequence in generated_sequences]
+        return np.array(translated_sequences).reshape(-1,1)
 
     @find_executable_batch_size(starting_batch_size=10)
     def inner_loop(batch_size):
@@ -139,7 +153,6 @@ def main():
 
         # Initialize metric accumulators
         prediction_file = open(f'./data/nomelt-model/device_predictions_{str(device)}.tsv', 'w')
-        total_loss = torch.tensor(0.0).to(accelerator.device)
         # Loop through each batch and generate predictions
         for batch in tqdm(test_dataloader):
             # batch = {k: v.to(device) for k, v in batch.items()}
@@ -151,32 +164,23 @@ def main():
                     max_length=params['model']['generation_max_length'],
                     num_beams=params['model']['generation_num_beams'],
                 )
-                loss = model(**batch).loss
-                logger.info(f"Batch loss {loss}")
-                total_loss += loss * torch.tensor(len(batch['input_ids'])).to(accelerator.device)
             
             predictions, labels = outputs, batch['labels']
-            predictions = torch.where(predictions != -100, predictions, tokenizer.pad_token_id)
-            # decode
-            predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-            labels = torch.where(labels != -100, labels, tokenizer.pad_token_id)
-            labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-            inputs = tokenizer.batch_decode(batch['input_ids'], skip_special_tokens=True)
+            
+            inputs = decode_tensor(batch['input_ids'])
+            predictions = decode_tensor(predictions)
+            labels = decode_tensor(labels)
 
             # write predictions to file
             for i, p, l in zip(inputs, predictions, labels):
-                prediction_file.write(f"{i}\t{p}\t{l}\n")
+                prediction_file.write(f"{i[0]}\t{p[0]}\t{l[0]}\n")
 
-        total_loss = accelerator.gather_for_metrics(total_loss)
 
         prediction_file.close()
-        return total_loss
+        return 
     
     # Run the inner loop
-    total_losses = inner_loop()
-    logger.info(f"Total losses retrieved: {total_losses}")
-    total_loss = float(total_losses.cpu().sum())
-    logger.info(f"Total loss: {total_loss}")
+    inner_loop()
 
     accelerator.wait_for_everyone()
 
@@ -186,7 +190,8 @@ def main():
         dfs = [pd.read_csv(f'./data/nomelt-model/{f}', sep='\t', header=None) for f in os.listdir('./data/nomelt-model/') if 'device_predictions' in f]
         df = pd.concat(dfs)
         # remove old files
-        df.to_csv('./data/nomelt-model/predictions.tsv', sep='\t', header=None, index=False)
+        df.columns = ['input', 'prediction', 'label']
+        df.to_csv('./data/nomelt-model/predictions.tsv', sep='\t', index=False)
         for f in os.listdir('./data/nomelt-model/'):
             if 'device_predictions' in f:
                 os.remove(f'./data/nomelt-model/{f}')
