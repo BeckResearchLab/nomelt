@@ -75,7 +75,13 @@ if __name__ == '__main__':
     utils_logger.addHandler(fh)
 
     ds = datasets.load_from_disk('./data/dataset')['test']
-    ds = ds.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique'])
+    # keep only a single sequence from each cluster
+    # first mark the indexes of each
+    cluster_dict = {}
+    for i, clust in enumerate(ds['cluster']):
+        cluster_dict[clust] = i
+    keep_indexes = set(cluster_dict.values())
+    ds = ds.filter(lambda x, idx: idx in keep_indexes, with_indices=True)
 
     conn = ddb.connect('./data/database.ddb', read_only=True)
     seqs = conn.execute('SELECT pid, protein_seq FROM proteins INNER JOIN taxa ON (taxa.taxid=proteins.taxid) WHERE taxa.temperature>=65.0').df()

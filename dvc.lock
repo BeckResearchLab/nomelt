@@ -158,3 +158,52 @@ stages:
       hash: md5
       md5: 1272601acd644ec6b0ba762df6f05ace
       size: 214718
+  score_predictions:
+    cmd: python scripts/score_predictions.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 1272601acd644ec6b0ba762df6f05ace
+      size: 214718
+    - path: ./scripts/score_predictions.py
+      hash: md5
+      md5: ab43e910ba7db780115e01f82834c1a8
+      size: 3853
+    outs:
+    - path: ./data/nomelt-model/test_scores.json
+      hash: md5
+      md5: 03b68b252722b082bc4f3f120c17eb92
+      size: 290
+  compare_sequence_alignment:
+    cmd: python scripts/compare_sequence_alignment.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 1272601acd644ec6b0ba762df6f05ace
+      size: 214718
+    - path: ./scripts/compare_sequence_alignment.py
+      hash: md5
+      md5: 78aa3fd9a637f6b55a83c940e1bca96f
+      size: 2851
+    outs:
+    - path: ./data/nomelt-model/test_predictions_aligned_results.json
+      hash: md5
+      md5: d2de03e6e141ad315761a1133a35717b
+      size: 749515
+  natural_diversity_entropy:
+    cmd: python scripts/proof_of_principle/natural_diversity_entropy.py
+    deps:
+    - path: ./data/dataset
+      hash: md5
+      md5: 7415c0cd0df9964297d1b61df5341438.dir
+      size: 830493755
+      nfiles: 19
+    - path: ./scripts/proof_of_principle/natural_diversity_entropy.py
+      hash: md5
+      md5: c91a2e6c91b0c330a6ee027f065b7e66
+      size: 5063
+    outs:
+    - path: ./data/proof_of_principle/natural_diversity_entropy.json
+      hash: md5
+      md5: a32d29514079094dc4d1f6b8325739f2
+      size: 37

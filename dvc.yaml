@@ -188,7 +188,7 @@ stages:
       - ./scripts/compare_sequence_alignment.py
       - ./data/nomelt-model/predictions.tsv
     outs:
-      - ./data/nomelt-model/sequence_alignment.csv:
+      - ./data/nomelt-model/test_predictions_aligned_results.json:
           cache: false
   compare_structure:
     wdir: ./

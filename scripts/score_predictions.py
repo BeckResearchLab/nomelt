@@ -69,12 +69,13 @@ def main():
     )
     tracker.start()
 
-    df = pd.read_csv('./data/nomelt-model/predictions.tsv', sep='\t', header=None)
+    df = pd.read_csv('./data/nomelt-model/predictions.tsv', sep='\t')
+    df = df.applymap(lambda x: ' '.join(list(x)))
     logger.info(f"Loaded predictions.  Computing metrics.")
 
     # chunk up the dataframe and use multiprocessing to compute metrics
-    predictions = df[1].tolist()
-    labels = df[2].tolist()
+    predictions = df['prediction'].tolist()
+    labels = df['label'].tolist()
     inputs = [(predictions[i:i+10], labels[i:i+10]) for i in range(0, len(predictions), 10)]
 
     # compute metrics
