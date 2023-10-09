@@ -74,7 +74,11 @@ def main():
     logger.info(f"Loaded dataset.  {dataset}")
 
     # keep only extremes in dataset to get a better uniform score
-    dataset = dataset.filter(lambda x: x['status_in_cluster'] in ['extreme', 'unique'])#.select(range(1000))
+    cluster_dict = {}
+    for i, clust in enumerate(dataset['cluster']):
+        cluster_dict[clust] = i
+    keep_indexes = set(cluster_dict.values())
+    dataset = dataset.filter(lambda x, idx: idx in keep_indexes, with_indices=True)
     dataset.save_to_disk('./tmp/test_embeddings')
     dataset = load_from_disk('./tmp/test_embeddings')
     logger.info(f"Keeping only extreme cluster and unique sequences. New size: {dataset}")

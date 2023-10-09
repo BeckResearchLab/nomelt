@@ -207,3 +207,20 @@ stages:
       hash: md5
       md5: a32d29514079094dc4d1f6b8325739f2
       size: 37
+  compute_test_embeddings:
+    cmd: python scripts/compute_test_embeddings.py
+    deps:
+    - path: ./data/dataset/
+      hash: md5
+      md5: 7415c0cd0df9964297d1b61df5341438.dir
+      size: 830493755
+      nfiles: 19
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 0a7e1478be1ef88037da4c451afd3c13.dir
+      size: 124037480969
+      nfiles: 107
+    - path: ./scripts/compute_test_embeddings.py
+      hash: md5
+      md5: 7daae1c976e7e416d8972f32bac98073
+      size: 5851
