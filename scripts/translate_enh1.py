@@ -1,4 +1,4 @@
-from nomelt.translate import translate_sequences
+from nomelt.model import NOMELTModel
 from yaml import safe_load
 import json
 import os
@@ -8,20 +8,20 @@ def main(sequence):
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
 
-    generated_sequences = translate_sequences(
+    model = NOMELTModel('./data/nomelt-model/model/', **params['model']['model_hyperparams'])
+
+    generated_sequences = model.translate_sequences(
         [sequence],
-        './data/nomelt-model/model/',
         generation_max_length=params['model']['generation_max_length'],
         generation_num_beams=params['model']['generation_num_beams'],
-        model_hyperparams=params['model']['model_hyperparams']
     )
-    return generated_sequences[0]
+    return generated_sequences
 
 if __name__ == "__main__":
     ENH1 = "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK"
     if not os.path.exists('./data/enh'):
         os.makedirs('./data/enh', exist_ok=True)
-    generated_sequence = main(ENH1)[0]
+    generated_sequence = main(ENH1)[0]['sequences'][0]
     outs = {
         'original': ENH1,
         'generated': generated_sequence,

@@ -16,7 +16,7 @@ estimator_args=mAFminDGArgs(
     af_params='./.config/af_singularity_config.yaml',
     wdir='./data/enh/initial_estimate/',
     use_relaxed=False,
-    num_replicates=50,
+    num_replicates=25,
     fix_msas=True,
     residue_length_norm=True
 )

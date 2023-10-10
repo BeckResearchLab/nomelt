@@ -224,3 +224,74 @@ stages:
       hash: md5
       md5: 7daae1c976e7e416d8972f32bac98073
       size: 5851
+  compare_structure:
+    cmd: python scripts/compare_structure.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 1272601acd644ec6b0ba762df6f05ace
+      size: 214718
+    - path: ./scripts/compare_structure.py
+      hash: md5
+      md5: dba7236a1abaa1022269338f8ed493d4
+      size: 10433
+    outs:
+    - path: ./data/nomelt-model/structure_metrics.json
+      hash: md5
+      md5: 164a3cab77a8517428b51a06b7b6337f
+      size: 110
+  translate_enh1:
+    cmd: python scripts/translate_enh1.py
+    deps:
+    - path: ./data/nomelt-model/model/
+      hash: md5
+      md5: 0a7e1478be1ef88037da4c451afd3c13.dir
+      size: 124037480969
+      nfiles: 107
+    - path: ./scripts/translate_enh1.py
+      hash: md5
+      md5: 407378273e838eb20aa9b0f5e2f8ed83
+      size: 1043
+    params:
+      params.yaml:
+        model.generation_max_length: 250
+        model.generation_num_beams: 10
+    outs:
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: b496f100a75d26cb1360891142f28827
+      size: 170
+  estimate_trans_energy_enh1:
+    cmd: python scripts/estimate_trans_energy_enh1.py
+    deps:
+    - path: ./.config/af_singularity_config.yaml
+      hash: md5
+      md5: 6ff0e462bb3c6efc4c9b314193e06468
+      size: 275
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: b496f100a75d26cb1360891142f28827
+      size: 170
+    - path: scripts/estimate_trans_energy_enh1.py
+      hash: md5
+      md5: a2085845540fefcaf3b66e745e87cbf0
+      size: 1382
+    params:
+      params.yaml:
+        optimize.estimator: mAFminDGEstimator
+        optimize.estimator_args:
+          af_params: ./.config/af_singularity_config.yaml
+          use_relaxed: false
+          num_replicates: 25
+          fix_msas: true
+          residue_length_norm: true
+    outs:
+    - path: ./data/enh/initial_estimate/
+      hash: md5
+      md5: 3ae1a953073e60125e36925cbe105999.dir
+      size: 14172160
+      nfiles: 39
+    - path: ./data/enh/translated_energy_enh1.json
+      hash: md5
+      md5: fddffa57d4dd446553f90303f8ebeb98
+      size: 53
