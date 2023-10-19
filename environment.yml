@@ -48,6 +48,5 @@ dependencies:
     - optuna
     - pillow
     - pydssp
-    - dask
     - dask-cuda
 

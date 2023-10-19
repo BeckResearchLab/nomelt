@@ -1,46 +1,50 @@
 data:
-  min_thermo_temp: 65.0
-  min_temp_diff: 35.0
+  min_thermo_temp: 60.0
+  min_temp_diff: 19.0
   min_align_cov: 0.95
   mmseq_params:
     coverage: 0.8
     min-seq-id: 0.2
     cluster-mode: 1
     similarity-type: 1
+    sensitivity: 7
+    max-seqs: 1000
+    cluster-steps: 3
+    cluster-reassign: 1
     e: 1e-3
   test_size: 0.1
+  additional_filters:
+    - 'abs({seq_len_diff})/{meso_seq_len} < 0.1'
   dev_sample_data: false
 model:
   pretrained_model: "Rostlab/prot_t5_xl_uniref50"
   model_hyperparams:
-    dropout_rate: 0.1
+    dropout_rate: 0.15
     relative_attention_max_distance: 250 
   task: 'translation' # one of 'reconstruction', 'translation'
   generation_max_length: 250
   generation_num_beams: 10
 training:
-  reweight: true # whether to weight the loss function by the number of sequences in each cluster
-  epochs:  3
+  reweight: false # whether to weight the loss function by the number of sequences in each cluster
+  epochs:  0.5
   early_stopping: true
   early_stopping_patience: 4
-  early_stopping_threshold: 0.01
+  early_stopping_threshold: 0.0
   per_device_batch_size: 20
   auto_find_batch_size: false
   learning_rate: 1.e-4
-  gradient_accumulation: 2
+  gradient_accumulation: 8
   gradient_checkpointing: true
   evals_per_save: 3 
-  evals_per_epoch: 30 # null means save only at the end of training
+  evals_per_epoch: 500 # null means save only at the end of training
   lr_scheduler_type: 'linear'
   warmup_ratio: 0.1
-  label_smoothing_factor: 0.01
+  label_smoothing_factor: 0.001
   optim: "adamw_hf"
   optim_args: null #"scale_parameter=False,relative_step=False"
   fp16: false
   bf16: true
-  additional_filters:
-    - 'abs({seq_len_diff})/{meso_seq_len} < 0.08'
-  max_eval_examples: 5000    # only during training
+  eval_single_example_per_cluster: true    # only during training
   dev_sample_data: false
 testing:
   only_one_from_cluster: true

@@ -37,6 +37,24 @@ else:
 LOGNAME = __file__
 LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
+def get_custom_filter(filter_str):
+    """Convert a string into a callable thatr can be used to filter data
+    based on columns in the dataset.
+
+    Eg for input string 'status_in_cluster == "extreme"':
+    >>> filter = get_custom_filter('{status_in_cluster} == "extreme"')
+    >>> dataset = dataset.filter(filter)
+    """
+    def custom_callable(example):
+        # Extract the column names by using format-style string operations
+        condition = filter_str.format(**example)
+        
+        # Use eval to compute the result of the condition
+        return eval(condition)
+    
+    return custom_callable
+
+
 def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
     # check the cache
     if os.path.exists('./tmp/hf_cache/ds_cache_key.pkl'):
@@ -111,7 +129,9 @@ def run_mmseq(input_fasta, output_dir, params):
     tmp_dir = os.path.join(output_dir, "tmp")
     os.makedirs(tmp_dir, exist_ok=True)
     run_mmseqs_command(["mmseqs", "cluster", db_name, cluster_out, tmp_dir, 
-                        "--min-seq-id", str(params['min-seq-id']),
+                        "--min-seq-id", str(params['min-seq-id']), '--cluster-reassign', str(params['cluster-reassign']),
+                        '--cluster-steps', str(params['cluster-steps']), '-s', str(params['sensitivity']),
+                        '--max-seqs', str(params['max-seqs']), 
                         "-c", str(params['coverage']),
                         "--cov-mode", str(0), "--similarity-type", str(params['similarity-type']), '-e', str(params['e']),
                         "--cluster-mode", str(params['cluster-mode']), "--threads", "32"])
@@ -170,6 +190,12 @@ if __name__ == '__main__':
         ds = ds.shuffle().select(range(params['data']['dev_sample_data']))
         logger.info(f"Sampled data: {len(ds)} pairs.")
 
+    # apply additional filters
+    if params['data']['additional_filters']:
+        for filter_str in params['data']['additional_filters']:
+            ds = ds.filter(get_custom_filter(filter_str))
+            logger.info(f"Applied additional filter {filter_str}. New size {len(ds)}")
+
     # add a columnd equal to the index - we need to keep track of original indices
     # because we will be removing duplicates based on index
     def add_index(examples, idxs):
@@ -181,6 +207,7 @@ if __name__ == '__main__':
     logger.info('Finding identical sequences')
     unique_seqs = tuple(set(ds['meso_seq']))
     unique_seq_dict = {hash(seq): seq for seq in unique_seqs}
+    assert len(unique_seqs) == len(unique_seq_dict)
     logger.info(f"Found {len(unique_seqs)} unique sequences.")
     def add_unique_seq_hash(example):
         example['unique_seq_hash'] = hash(example['meso_seq'])
@@ -236,17 +263,17 @@ if __name__ == '__main__':
     logger.info(f"""SPLITTING REPORT
 -------------------
 Train size: {len(train)}
-Train clusters: {[c for c in set(train['cluster'])]}
+Train clusters: {len([c for c in set(train['cluster'])])}
 Eval size: {len(eval)}
-Eval clusters: {[c for c in set(eval['cluster'])]}
+Eval clusters: {len(([c for c in set(eval['cluster'])]))}
 Test size: {len(test)}
-Test clusters: {[c for c in set(test['cluster'])]}
+Test clusters: {len(([c for c in set(test['cluster'])]))}
 """)
     data_dict = datasets.DatasetDict({'train': train, 'eval': eval, 'test': test})
 
     logger.info(f'Final datasets: {data_dict}')
     data_dict.save_to_disk('./data/dataset/')
-    # data_dict.cleanup_cache_files()
+    data_dict.cleanup_cache_files()
 
     # there is a weird bug where the dataset is not saved properly eg the dataset_dict.josn file is empty
     # this is a hacky workaround
@@ -263,6 +290,9 @@ Test clusters: {[c for c in set(test['cluster'])]}
         'data_n_train': len(data_dict['train']),
         'data_n_eval': len(data_dict['eval']),
         'data_n_test': len(data_dict['test']),
+        'clusters_n_train': len([c for c in set(data_dict['train']['cluster'])]),
+        'clusters_n_eval': len([c for c in set(data_dict['eval']['cluster'])]),
+        'clusters_n_test': len([c for c in set(data_dict['test']['cluster'])]),
     }
 
     # save metrics

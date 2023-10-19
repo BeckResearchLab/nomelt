@@ -14,6 +14,7 @@ stages:
       - data.mmseq_params
       - data.test_size
       - data.dev_sample_data
+      - data.additional_filters
     outs:
       - ./data/dataset/
     metrics:
@@ -59,13 +60,12 @@ stages:
       - training.warmup_ratio
       - training.optim
       - training.optim_args
-      - training.max_eval_examples
+      - training.eval_single_example_per_cluster
       - training.fp16
       - training.bf16
       - training.early_stopping
       - training.early_stopping_patience
       - training.early_stopping_threshold
-      - training.additional_filters
     outs:
       - ./data/nomelt-model/model/:
           persist: true
