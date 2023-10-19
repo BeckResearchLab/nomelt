@@ -184,12 +184,29 @@ def main():
             for ex in dataset['train']:
                 c = ex['cluster']
                 cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+            for ex in dataset['eval']:
+                c = ex['cluster']
+                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+            for ex in dataset['test']:
+                c = ex['cluster']
+                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
             # then compute the weight for each sequence
             def do_one(ex):
                 c = ex['cluster']
                 ex['weight'] = 1/cluster_sizes[c]
                 return ex
-            dataset['train'] = dataset['train'].map(do_one, batched=False, desc='Computing sample weights')
+            dataset = dataset.map(
+                do_one,
+                batched=False,
+                desc='Computing sample weights',
+                num_proc=32,
+                load_from_cache_file=True,
+                cache_file_names={
+                    'train':'./data/dataset/train/weight_train.arrow',
+                    'eval':'./data/dataset/eval/weight_eval.arrow',
+                    'test':'./data/dataset/test/weight_test.arrow'
+                },
+            )
             logger.info(f"Compute sample weights: {(len(dataset['train']), len(dataset['eval']), len(dataset['test']))}")
         
         if params['training']['eval_single_example_per_cluster']:
@@ -276,6 +293,23 @@ def main():
         setattr(model_config, model_hyperparam, params['model']['model_hyperparams'][model_hyperparam])
     setattr(model_config, 'max_length', params['model']['generation_max_length'])
     model = AutoModelForSeq2SeqLM.from_pretrained(params['model']['pretrained_model'], config=model_config)
+
+    if params['training']['freeze_early_layers']:
+        if type(params['training']['freeze_early_layers']) != float:
+            raise ValueError("If freezing layers, expecting fraction of layers from bottom to freeze")
+        encoder_stack_size = len(model.encoder.block)
+        decoder_stack_size = len(model.decoder.block)
+        enc_layers_to_freeze = int(encoder_stack_size * params['training']['freeze_early_layers'])
+        dec_layers_to_freeze = int(decoder_stack_size * params['training']['freeze_early_layers'])
+        logger.info(f"Freezing {enc_layers_to_freeze} encoder layers and {dec_layers_to_freeze} decoder layers")
+        for i, t5block in enumerate(model.encoder.block):
+            if i < enc_layers_to_freeze:
+                for param in t5block.parameters():
+                    param.requires_grad = False
+        for i, t5block in enumerate(model.decoder.block):
+            if i < dec_layers_to_freeze:
+                for param in t5block.parameters():
+                    param.requires_grad = False
 
     # collator
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
