@@ -72,13 +72,13 @@ stages:
     deps:
     - path: ./.config/accelerate/default_config.yaml
       hash: md5
-      md5: 34c8f90a097739f7f600327aa441e33a
-      size: 525
+      md5: 95ca9cca8e01234b44a04276dabdc80f
+      size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: 216b84846ed4155cd53e41fd8ca3641f.dir
-      size: 20176668663
-      nfiles: 20
+      md5: fa9f036c4df1d91f56a5f2aa443355da.dir
+      size: 20177029943
+      nfiles: 28
     - path: ./scripts/train.py
       hash: md5
       md5: 514d448c79883232512e25570ece200a
@@ -102,8 +102,8 @@ stages:
         training.evals_per_epoch: 500
         training.evals_per_save: 3
         training.fp16: false
-        training.freeze_early_layers: false
-        training.gradient_accumulation: 14
+        training.freeze_early_layers: 0.8
+        training.gradient_accumulation: 7
         training.gradient_checkpointing: true
         training.label_smoothing_factor: 0.001
         training.learning_rate: 0.0001
@@ -116,27 +116,27 @@ stages:
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: 98aec6fc440b89e58cc54593b708b3e6
-      size: 392
+      md5: 10647c4e074daa0f70a537ea50a7579f
+      size: 391
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: 792aec71bca3f833c8a49739b5b569b1.dir
-      size: 9435
+      md5: b4365c2c3e26a70f268300172d5c2f37.dir
+      size: 8441
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: 54e974ddd611b90ca94f29bf4521c61d
+      md5: 5bb17f17d2c97d2244cf325fe115948f
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: 0912daf7fa7de3ae377bd72ead9631e7.dir
-      size: 243827
+      md5: 19cdb2221d990ff6e5d245c08bf199e0.dir
+      size: 234655
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 59af50d71a2ccda03a462d2ba5afeaa7.dir
-      size: 321360956523
-      nfiles: 200
+      md5: ef733128362a89e3ffa125da943753a6.dir
+      size: 142861530242
+      nfiles: 296
   make_predictions:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
       scripts/make_predictions.py

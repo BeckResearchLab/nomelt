@@ -27,7 +27,7 @@ model:
   generation_num_beams: 10
 training:
   reweight: false # whether to weight the loss function by the number of sequences in each cluster
-  freeze_early_layers: false
+  freeze_early_layers: 0.8
   epochs:  0.5
   early_stopping: true
   early_stopping_patience: 4
@@ -35,7 +35,7 @@ training:
   per_device_batch_size: 20
   auto_find_batch_size: false
   learning_rate: 1.e-4
-  gradient_accumulation: 14
+  gradient_accumulation: 7
   gradient_checkpointing: true
   evals_per_save: 3 
   evals_per_epoch: 500 # null means save only at the end of training
