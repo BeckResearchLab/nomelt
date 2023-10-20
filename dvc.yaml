@@ -10,6 +10,7 @@ stages:
     params:
       - data.min_temp_diff
       - data.min_thermo_temp
+      - data.max_meso_temp
       - data.min_align_cov
       - data.mmseq_params
       - data.test_size

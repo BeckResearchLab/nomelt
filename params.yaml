@@ -1,6 +1,7 @@
 data:
   min_thermo_temp: 60.0
-  min_temp_diff: 19.0
+  min_temp_diff: 0.0
+  max_meso_temp: 40.0
   min_align_cov: 0.95
   mmseq_params:
     coverage: 0.8
@@ -25,7 +26,7 @@ model:
   generation_max_length: 250
   generation_num_beams: 10
 training:
-  reweight: true # whether to weight the loss function by the number of sequences in each cluster
+  reweight: false # whether to weight the loss function by the number of sequences in each cluster
   freeze_early_layers: false
   epochs:  0.5
   early_stopping: true

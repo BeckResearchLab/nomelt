@@ -13,15 +13,16 @@ stages:
       size: 13055
     - path: ./scripts/prepare_data.py
       hash: md5
-      md5: d17b07d8316b12e94dc06c203be2a700
-      size: 11278
+      md5: 202a282af1cec60d96373bde1d0376e9
+      size: 11367
     params:
       params.yaml:
         data.additional_filters:
         - abs({seq_len_diff})/{meso_seq_len} < 0.1
         data.dev_sample_data: false
+        data.max_meso_temp: 40.0
         data.min_align_cov: 0.95
-        data.min_temp_diff: 19.0
+        data.min_temp_diff: 0.0
         data.min_thermo_temp: 60.0
         data.mmseq_params:
           coverage: 0.8
@@ -37,13 +38,13 @@ stages:
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 5c05a9aa199f8a2d52431526e16f8549
-      size: 158
+      md5: 5c87f7337885d5b6205653733ae15e21
+      size: 157
     - path: ./data/dataset/
       hash: md5
-      md5: 069a646a0dc8b4f893776ee9ab72e9d3.dir
-      size: 20176723202
-      nfiles: 25
+      md5: b1788723aba40f72cb27c1a5c6e2f0e9.dir
+      size: 2396535359
+      nfiles: 13
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
@@ -75,9 +76,9 @@ stages:
       size: 525
     - path: ./data/dataset/
       hash: md5
-      md5: 4564d10d25a2319ee934c18cf1c6ed4f.dir
-      size: 37995221485
-      nfiles: 126
+      md5: 216b84846ed4155cd53e41fd8ca3641f.dir
+      size: 20176668663
+      nfiles: 20
     - path: ./scripts/train.py
       hash: md5
       md5: 514d448c79883232512e25570ece200a
@@ -110,31 +111,31 @@ stages:
         training.optim: adamw_hf
         training.optim_args:
         training.per_device_batch_size: 20
-        training.reweight: true
+        training.reweight: false
         training.warmup_ratio: 0.1
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: 9bbd740cabb1a17b37df3ec959d0b853
-      size: 388
+      md5: 98aec6fc440b89e58cc54593b708b3e6
+      size: 392
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: abd929bed0fc19488836d9612260c1b3.dir
-      size: 9565
+      md5: 792aec71bca3f833c8a49739b5b569b1.dir
+      size: 9435
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: dfac9cb0bcd0d028b7266bbfe78965b5
+      md5: 54e974ddd611b90ca94f29bf4521c61d
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: f260fba9f1524d117a9797875d371ef7.dir
-      size: 244801
+      md5: 0912daf7fa7de3ae377bd72ead9631e7.dir
+      size: 243827
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: db117c908582d60b6396a9960effd462.dir
-      size: 321360947413
+      md5: 59af50d71a2ccda03a462d2ba5afeaa7.dir
+      size: 321360956523
       nfiles: 200
   make_predictions:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml

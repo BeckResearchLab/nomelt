@@ -55,7 +55,7 @@ def get_custom_filter(filter_str):
     return custom_callable
 
 
-def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
+def load_data(db_file, min_temp_diff, min_thermo_temp, max_meso_temp, min_align_cov=0.75):
     # check the cache
     if os.path.exists('./tmp/hf_cache/ds_cache_key.pkl'):
         with open('./tmp/hf_cache/ds_cache_key.pkl', 'rb') as f:
@@ -88,6 +88,7 @@ def load_data(db_file, min_temp_diff, min_thermo_temp, min_align_cov=0.75):
     INNER JOIN taxa AS t ON pairs.thermo_taxid = t.taxid
     WHERE ABS(m.temperature - t.temperature) >= {min_temp_diff}
     AND t.temperature >= {min_thermo_temp}
+    AND m.temperature <= {max_meso_temp}
     AND ((pairs.query_align_cov+ pairs.subject_align_cov)/2.0)>={min_align_cov}
     """
     dataset = datasets.Dataset.from_sql(
@@ -184,7 +185,7 @@ if __name__ == '__main__':
     data_tracker.start()
     
     # get data
-    ds = load_data('./data/database.ddb', params['data']['min_temp_diff'], params['data']['min_thermo_temp'], params['data']['min_align_cov'])
+    ds = load_data('./data/database.ddb', params['data']['min_temp_diff'], params['data']['min_thermo_temp'], params['data']['max_meso_temp'], params['data']['min_align_cov'])
     logger.info(f"Loaded data from database: {len(ds)} pairs.")
     if params['data']['dev_sample_data']:
         ds = ds.shuffle().select(range(params['data']['dev_sample_data']))
