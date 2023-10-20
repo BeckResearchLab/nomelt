@@ -5,8 +5,10 @@ from datetime import timedelta
 import logging
 import numpy as np
 import os
+import json
 import re
 import torch
+import tqdm
 from pynvml import *
 import pprint
 from yaml import safe_load
@@ -178,18 +180,25 @@ def main():
             logger.info(f"Sampling {params['training']['dev_sample_data']} sequences from train and test sets. New train, eval size: {(len(dataset['train']), len(dataset['eval']))}")
 
         if params['training']['reweight']:
+            logger.info('Applying reweighting based on cluster size.')
             # compute cluster sizes in train set and use to compute sample weight. A cluster with 1 sequence will have weight 1.
             # first count the number of sequences in each cluster
-            cluster_sizes = {}
-            for ex in dataset['train']:
-                c = ex['cluster']
-                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
-            for ex in dataset['eval']:
-                c = ex['cluster']
-                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
-            for ex in dataset['test']:
-                c = ex['cluster']
-                cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+            if 'cluster_counts.json' in os.listdir('./data/dataset/'):
+                with open('./data/dataset/cluster_counts.json', 'r') as f:
+                    cluster_sizes = json.load(f)
+            else:
+                cluster_sizes = {}
+                for ex in tqdm.tqdm(dataset['train'], total=len(dataset['train'])):
+                    c = ex['cluster']
+                    cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+                for ex in tqdm.tqdm(dataset['eval'], total=len(dataset['eval'])):
+                    c = ex['cluster']
+                    cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+                for ex in tqdm.tqdm(dataset['test'], total=len(dataset['test'])):
+                    c = ex['cluster']
+                    cluster_sizes[c] = cluster_sizes.get(c, 0) + 1
+                with open('./data/dataset/cluster_counts.json', 'w') as f:
+                    json.dump(cluster_sizes, f)
             # then compute the weight for each sequence
             def do_one(ex):
                 c = ex['cluster']

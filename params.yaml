@@ -19,21 +19,22 @@ data:
 model:
   pretrained_model: "Rostlab/prot_t5_xl_uniref50"
   model_hyperparams:
-    dropout_rate: 0.15
+    dropout_rate: 0.1
     relative_attention_max_distance: 250 
   task: 'translation' # one of 'reconstruction', 'translation'
   generation_max_length: 250
   generation_num_beams: 10
 training:
-  reweight: false # whether to weight the loss function by the number of sequences in each cluster
+  reweight: true # whether to weight the loss function by the number of sequences in each cluster
+  freeze_early_layers: false
   epochs:  0.5
   early_stopping: true
   early_stopping_patience: 4
-  early_stopping_threshold: 0.0
+  early_stopping_threshold: 0.01
   per_device_batch_size: 20
   auto_find_batch_size: false
   learning_rate: 1.e-4
-  gradient_accumulation: 8
+  gradient_accumulation: 14
   gradient_checkpointing: true
   evals_per_save: 3 
   evals_per_epoch: 500 # null means save only at the end of training

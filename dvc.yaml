@@ -46,6 +46,7 @@ stages:
       - model.generation_max_length
       - model.model_hyperparams
       - training.reweight
+      - training.freeze_early_layers
       - training.dev_sample_data
       - training.per_device_batch_size
       - training.gradient_accumulation
