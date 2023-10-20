@@ -76,7 +76,7 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: fa9f036c4df1d91f56a5f2aa443355da.dir
+      md5: b26bfea717810578b33e7fd11e60c9cd.dir
       size: 20177029943
       nfiles: 28
     - path: ./scripts/train.py
@@ -102,7 +102,7 @@ stages:
         training.evals_per_epoch: 500
         training.evals_per_save: 3
         training.fp16: false
-        training.freeze_early_layers: 0.8
+        training.freeze_early_layers: 0.2
         training.gradient_accumulation: 7
         training.gradient_checkpointing: true
         training.label_smoothing_factor: 0.001
@@ -116,26 +116,26 @@ stages:
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: 10647c4e074daa0f70a537ea50a7579f
+      md5: 71628756ddb22b64a0808e41f2391c12
       size: 391
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: b4365c2c3e26a70f268300172d5c2f37.dir
-      size: 8441
+      md5: abc1e2589609fb535bc12dcc5f4a1cf7.dir
+      size: 7423
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: 5bb17f17d2c97d2244cf325fe115948f
+      md5: 3e8e9b6f2155693ada78f29059ba00c2
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: 19cdb2221d990ff6e5d245c08bf199e0.dir
-      size: 234655
+      md5: a8adc905ee0c46abbee8f501b78e416c.dir
+      size: 234554
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: ef733128362a89e3ffa125da943753a6.dir
-      size: 142861530242
+      md5: 021e33d141eafe99bd4a394587fd961b.dir
+      size: 266174054447
       nfiles: 296
   make_predictions:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml

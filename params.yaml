@@ -27,7 +27,7 @@ model:
   generation_num_beams: 10
 training:
   reweight: false # whether to weight the loss function by the number of sequences in each cluster
-  freeze_early_layers: 0.8
+  freeze_early_layers: 0.2
   epochs:  0.5
   early_stopping: true
   early_stopping_patience: 4
