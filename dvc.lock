@@ -42,9 +42,9 @@ stages:
       size: 157
     - path: ./data/dataset/
       hash: md5
-      md5: b1788723aba40f72cb27c1a5c6e2f0e9.dir
-      size: 2396535359
-      nfiles: 13
+      md5: 216b84846ed4155cd53e41fd8ca3641f.dir
+      size: 20176668663
+      nfiles: 20
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
