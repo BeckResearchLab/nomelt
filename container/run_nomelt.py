@@ -9,32 +9,9 @@ import nomelt.thermo_estimation
 from dask_cuda import LocalCUDACluster
 from dask.distributed import Client
 from nomelt.thermo_estimation.optimizer import MutationSubsetOptimizer, OptimizerArgs
+from nomelt.model import NOMELTModel
 
 logger = logging.getLogger(__name__)
-
-def beam_search_translation(sequence, model_path, config):
-    generated_sequences = translate_sequences(
-        [sequence],
-        model_path,
-        generation_max_length=config['generation_max_length'],
-        generation_num_beams=config['generation_num_beams'],
-        model_hyperparams=config['model_hyperparams']
-    )
-    return generated_sequences[0]
-
-def stochastic_sequence_generation(sequence, model_path, config):
-    ensemble = []
-    while len(ensemble) < config['generation_ensemble_size']:
-        ensemble_ = nomelt.translate.translate_sequences(
-            [sequence],
-            model_path=model_path,
-            model_hyperparams=config['model_hyperparams'],
-            generation_num_beams=None,
-            generation_ensemble_size=5,
-            temperature=config['temperature']
-        )
-        ensemble.extend([s[0] for s in ensemble_ if abs(len(s[0]) - len(sequence))/len(sequence) < config['max_length_difference']])
-    return ensemble
 
 def init_optimizer(sequence, trans_seq, output_dir, config):
     N_GPUS = torch.cuda.device_count()
@@ -87,20 +64,47 @@ def main(args):
     with open(args.config_file, 'r') as f:
         config = yaml.safe_load(f)
 
-    sequence = args.sequence
+    sequence = args.input
     output_dir = args.output_dir
     model_path = args.model_path
+
+    model = NOMELTModel(model_path, config['model']['hyperparams'])
+
+    if config['zero_shot_ranking']['enabled']:
+        logger.info('Doing zero shot, ignoring generation options')
+
+        with open(sequence, 'r') as f:
+            sequences = f.readlines()
+        scores = model.score_variants(sequences, indels=config['zero_shot_ranking']['indels']) # this is just a list of scores
+        scores_file = os.path.join(output_dir, "zero_shot_scores.csv")
+        logger.info(f"Zero shot scoring complete. Writing to {scores_file}")
+        with open(scores_file, 'w') as f:
+            f.write("\n".join([str(score) for score in scores]))
+        return
     
     if config['beam_search']['enabled']:
         logger.info("Running beam search translation...")
-        out_sequence = beam_search_translation(sequence, model_path, config['beam_search'])
+        out_sequence = model.translate_sequences(
+            [sequence],
+            generation_max_length=config['beam_search']['generation_max_length'],
+            generation_num_beams=config['beam_search']['generation_num_beams'],
+        )[0]['sequences'][0]
         seq_out_file = os.path.join(output_dir, "beam_search_sequence.txt")
         logger.info(f"Beam search translation complete. Writing to {seq_out_file}")
         with open(seq_out_file, 'w') as f:
             f.write(out_sequence)
 
     if config['stochastic']['enabled']:
-        sequences = stochastic_sequence_generation(sequence, model_path, config['stochastic'])
+        sequences = []
+
+        while len(sequences) < config['stochastic']['generation_ensemble_size']:
+            sequences.extend(model.translate_sequences(
+                    [sequence],
+                    generation_max_length=config['beam_search']['generation_max_length'],
+                    temperature=config['stochastic']['temperature'],
+                    generation_ensemble_size=config['stochastic']['generation_ensemble_size'],
+                )[0]['sequences']
+            )
         seq_out_file = os.path.join(output_dir, "stochastic_sequences.txt")
         logger.info(f"Stochastic sequence generation complete. Writing to {seq_out_file}")
         with open(seq_out_file, 'w') as f:
@@ -142,7 +146,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Runs a pipeline based on a sequence and configuration file.")
-    parser.add_argument("sequence", type=str, help="Input sequence.")
+    parser.add_argument("input", type=str, help="Input sequence (str) or library (text file).")
     parser.add_argument("output_dir", type=str, help="Path to the output directory.")
     parser.add_argument("model_path", type=str, help="Path to the NOMELT model directory.")
     parser.add_argument("config_file", type=str, help="Path to the config.yaml file.")

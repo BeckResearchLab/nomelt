@@ -7,8 +7,8 @@ TODO
 conda installs
 rosetta install seperate
 af install seperate
-haddock install seperate
 FATCAT
+CD-HIT
 
 
 ## Config

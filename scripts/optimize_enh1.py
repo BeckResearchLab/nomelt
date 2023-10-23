@@ -97,7 +97,7 @@ def main():
         trans_seq,
         args=optimizer_args,
         name='enh_vs_translate',
-        wdir='./data/enh/optimize_enh1/',
+        wdir='./tmp/optimize_enh1/',
         estimator=estimator)
     
     # run the optimization

@@ -41,4 +41,9 @@ optimization:
     sampler_args:
       population_size: 10
     optuna_overwrite: false
+
+# OR: zero shot prediction
+zero_shot_ranking:
+  enabled: false
+  indels: false   # if true, will use full sequence probabilities
     
