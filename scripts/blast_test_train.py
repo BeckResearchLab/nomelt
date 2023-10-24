@@ -19,6 +19,16 @@ if __name__ == '__main__':
     # Load dataset
     ds = datasets.load_from_disk('./data/dataset')
 
+    # select one seq from each cluster
+    # keep only a single sequence from each cluster
+    # first mark the indexes of each
+    cluster_dict = {}
+    for i, clust in enumerate(ds['test']['cluster']):
+        cluster_dict[clust] = i
+    keep_indexes = set(cluster_dict.values())
+    ds['test'] = ds['test'].filter(lambda x, idx: idx in keep_indexes, with_indices=True)
+    print(len(ds['test']))
+
     # Write query sequence to file
     query_file_path = f'./tmp/blast_query.fasta'
     with open(query_file_path, 'w') as f:
@@ -87,6 +97,7 @@ if __name__ == '__main__':
     # compute quantiles of both and save metrics to json
     metrics = pd.DataFrame({'e': es, 'perc_id': perc_identities}).describe().to_dict()
     metrics['n_aligned'] = num_aligned
+    metrics['n_total'] = len(ds['test'])
     with open('./data/test_train_blast_metrics.json', 'w') as f:
         json.dump(metrics, f, indent=4)
 

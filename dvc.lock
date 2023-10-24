@@ -42,30 +42,30 @@ stages:
       size: 161
     - path: ./data/dataset/
       hash: md5
-      md5: ab4826c02503be9f0b5d98591af56709.dir
-      size: 20177216375
-      nfiles: 24
+      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
+      size: 20177331591
+      nfiles: 25
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 694dcc3c2816dab11e4ee6c29976d0a5.dir
-      size: 822169547
-      nfiles: 11
+      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
+      size: 20177331591
+      nfiles: 25
     - path: ./scripts/blast_test_train.py
       hash: md5
-      md5: 50ddd31336baf785e8bef3f6b66a3124
-      size: 3108
+      md5: 51222ec5d52d66570dc016bda585a5f2
+      size: 3549
     outs:
     - path: ./data/plots/test_train_blast_hist.png
       hash: md5
-      md5: c2143e5887a3daf540c72f25e995cc9a
-      size: 135130
+      md5: 963fecf3738cbc83cd30382dc919b7df
+      size: 114833
     - path: ./data/test_train_blast_metrics.json
       hash: md5
-      md5: cd1cab15c21d528c6f1f04bb69f26daf
-      size: 609
+      md5: a90f58e2bb022dab15c1899a8fe20605
+      size: 601
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
@@ -76,9 +76,9 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: ab4826c02503be9f0b5d98591af56709.dir
-      size: 20177216375
-      nfiles: 24
+      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
+      size: 20177331591
+      nfiles: 25
     - path: ./scripts/train.py
       hash: md5
       md5: 514d448c79883232512e25570ece200a
