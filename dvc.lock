@@ -28,7 +28,7 @@ stages:
           coverage: 0.8
           min-seq-id: 0.4
           cluster-mode: 1
-          similarity-type: 1
+          similarity-type: 2
           sensitivity: 7
           max-seqs: 1000
           cluster-steps: 3
