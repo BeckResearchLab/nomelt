@@ -28,7 +28,7 @@ stages:
           coverage: 0.8
           min-seq-id: 0.4
           cluster-mode: 1
-          similarity-type: 2
+          similarity-type: 1
           sensitivity: 7
           max-seqs: 1000
           cluster-steps: 3
@@ -38,21 +38,21 @@ stages:
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 53d590a5e814030d88ef27e21e01f771
+      md5: e911ca73217a53664e5a24e8d63d3b87
       size: 161
     - path: ./data/dataset/
       hash: md5
-      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
-      size: 20177331591
-      nfiles: 25
+      md5: ccf6d2b255d33495c36216a0323b600f.dir
+      size: 2396537042
+      nfiles: 14
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
-      size: 20177331591
-      nfiles: 25
+      md5: 3cb874a6ad7ed1e787daf1f09ee45f7e.dir
+      size: 2396599794
+      nfiles: 15
     - path: ./scripts/blast_test_train.py
       hash: md5
       md5: 51222ec5d52d66570dc016bda585a5f2
@@ -60,12 +60,12 @@ stages:
     outs:
     - path: ./data/plots/test_train_blast_hist.png
       hash: md5
-      md5: 963fecf3738cbc83cd30382dc919b7df
-      size: 114833
+      md5: e99add6384577e962b9cba3bf3e0f0f1
+      size: 123942
     - path: ./data/test_train_blast_metrics.json
       hash: md5
-      md5: a90f58e2bb022dab15c1899a8fe20605
-      size: 601
+      md5: b8611f15d5ba5c921afbe85bdfb5f1b3
+      size: 606
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
