@@ -72,13 +72,13 @@ stages:
     deps:
     - path: ./.config/accelerate/default_config.yaml
       hash: md5
-      md5: 95ca9cca8e01234b44a04276dabdc80f
+      md5: 944c78dde32aae09fb317726c143df3a
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: ccca9b4c18db0a80354f3aa4ed0d209b.dir
-      size: 20177331591
-      nfiles: 25
+      md5: d7c5c85b19b0efba66c1bb0b0f199124.dir
+      size: 20176871434
+      nfiles: 24
     - path: ./scripts/train.py
       hash: md5
       md5: 514d448c79883232512e25570ece200a
@@ -103,7 +103,7 @@ stages:
         training.evals_per_save: 3
         training.fp16: false
         training.freeze_early_layers: 0.2
-        training.gradient_accumulation: 7
+        training.gradient_accumulation: 8
         training.gradient_checkpointing: true
         training.label_smoothing_factor: 0.001
         training.learning_rate: 0.0001
@@ -116,27 +116,27 @@ stages:
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: ddd761ceb96aec10043849fa9396e4a0
-      size: 393
+      md5: a39a07afda3a3982c54f23b7c1c40518
+      size: 390
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: ee015da62063d3de214917484968a282.dir
-      size: 30808
+      md5: 1ff2f9e60a1d78c6ea1e43b5640e9c9d.dir
+      size: 27983
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: 586fb3f030c16b1e305fda6f45bff552
+      md5: c0fd00e795123322f9e80e7695eba183
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: 119f77d3732ca7e48e9e99541532613d.dir
-      size: 244122
+      md5: cce0e37e51150ab9e2a35c063cb382cf.dir
+      size: 244778
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 1edecb49a9b6ac132c6155f27e0eb83c.dir
-      size: 283790614221
-      nfiles: 296
+      md5: 6c8d34fa73c2d1942fe1eb8bf7376a16.dir
+      size: 283788032050
+      nfiles: 272
   make_predictions:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml
       scripts/make_predictions.py
