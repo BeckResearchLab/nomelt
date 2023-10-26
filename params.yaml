@@ -4,13 +4,13 @@ data:
   max_meso_temp: 40.0
   min_align_cov: 0.95
   mmseq_params:
-    coverage: 0.8
-    min-seq-id: 0.4
+    coverage: 0.95
+    min-seq-id: 0.2
     cluster-mode: 1
-    similarity-type: 1
+    similarity-type: 2
     sensitivity: 7
     max-seqs: 1000
-    cluster-steps: 3
+    cluster-steps: 5
     cluster-reassign: 1
     e: 1e-3
   test_size: 0.1
