@@ -5,7 +5,7 @@ data:
   min_align_cov: 0.95
   mmseq_params:
     coverage: 0.95
-    min-seq-id: 0.3
+    min-seq-id: 0.4
     cluster-mode: 1
     similarity-type: 2
     sensitivity: 7
