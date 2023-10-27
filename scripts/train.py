@@ -224,7 +224,7 @@ def main():
             cluster_dict = {}
             for i, clust in enumerate(dataset['eval']['cluster']):
                 cluster_dict[clust] = i
-            keep_indexes = set(cluster_dict.values())
+            keep_indexes = list(set(cluster_dict.values()))[:1000]
             dataset['eval_sample'] = dataset['eval'].filter(lambda x, idx: idx in keep_indexes, with_indices=True)
             logger.info(f"Sampling a single sequence from each eval cluster from eval set. New eval size: {len(dataset['eval_sample'])}")
         keep_columns = ['input_ids', 'attention_mask', 'labels']
