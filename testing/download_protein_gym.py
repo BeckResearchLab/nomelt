@@ -15,7 +15,6 @@ import pandas as pd
 # local dependencies
 
 ## initialize logger
-import logging
 logger = logging.getLogger(__name__)
 
 if 'LOGLEVEL' in os.environ:
@@ -37,11 +36,19 @@ download_dir = "./data/gym/"
 
 
 if __name__ == "__main__":
+    # initialize logger
+    logger.setLevel(getattr(logging, LOGLEVEL))
+    fh = logging.FileHandler(LOGFILE, mode='w')
+    formatter = logging.Formatter('%(filename)-12s %(asctime)s;%(funcName)-12s: %(levelname)-8s %(message)s')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+
     try:
         os.makedirs(download_dir, exist_ok=True)
-        print("download directory has been created (or already exists!)")
+        logger.info("download directory has been created (or already exists!)")
     except OSError as e:
-        print(f'Error creating directory: {e}')
+        logger.info(f'Error creating directory: {e}')
 
 
 # Initialize the download manager
@@ -55,9 +62,9 @@ for file_name in csv_files:
     try:
         downloaded_file_path = download_manager.download(data_url)
         downloaded_paths[file_name] = downloaded_file_path
-        print(f"downloaded {data_url}")
+        logger.info(f"downloaded {data_url}")
         # After downloading
         shutil.move(downloaded_file_path, os.path.join(download_dir, file_name))
-        print(f"downloaded file moved from the huggingface cache to {download_dir}")
+        logger.info(f"downloaded file moved from the huggingface cache to {download_dir}")
     except Exception as e:
         downloaded_paths[file_name] = f"Error: {e}"
