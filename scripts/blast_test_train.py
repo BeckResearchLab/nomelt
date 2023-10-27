@@ -68,17 +68,20 @@ if __name__ == '__main__':
             es.append(None)
             perc_identities.append(None)
             continue
-        hsp = alignment.hsps[0]
-        e = hsp.expect
 
         # check that the first hsp of the first align is indeed the best
+        e = 1000.0
+        align_keep = None
+        hsp_keep = None
         for align in record.alignments:
             for hsp in align.hsps:
                 if hsp.expect < e:
-                    raise ValueError('Not the best hsp')
+                    align_keep = align
+                    hsp_keep = hsp
+        e = hsp.expect
 
         es.append(e)
-        perc_identities.append(hsp.identities / ((alignment.length + record.query_length)/2))
+        perc_identities.append(hsp_keep.identities / ((align_keep.length + record.query_length)/2))
 
     num_aligned = len([e for e in es if e is not None])
     # remove nans
