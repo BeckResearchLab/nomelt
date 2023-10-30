@@ -26,7 +26,7 @@ stages:
         data.min_thermo_temp: 60.0
         data.mmseq_params:
           coverage: 0.95
-          min-seq-id: 0.4
+          min-seq-id: 0.5
           cluster-mode: 1
           similarity-type: 2
           sensitivity: 7
@@ -38,20 +38,20 @@ stages:
     outs:
     - path: ./data/data_metrics.yaml
       hash: md5
-      md5: 121ad368dfc0640d402bf2fa9cd4bb32
-      size: 161
+      md5: 95ccb4a2c65395f4684610fd8e91825b
+      size: 159
     - path: ./data/dataset/
       hash: md5
-      md5: bc033e73e65f593229f9e55c5c70f100.dir
-      size: 2396535866
-      nfiles: 14
+      md5: 56fcfb97dc44221059f2f88d6a0abfff.dir
+      size: 20176618266
+      nfiles: 24
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: fad4d834fdf0b0fc5046965ab872f54b.dir
-      size: 2396657522
+      md5: 34196e49b8542702b565b17f4da1375a.dir
+      size: 2396663610
       nfiles: 15
     - path: ./scripts/blast_test_train.py
       hash: md5
@@ -60,12 +60,12 @@ stages:
     outs:
     - path: ./data/plots/test_train_blast_hist.png
       hash: md5
-      md5: 75b5858e2c84b257a14f5aa6299c6940
-      size: 140631
+      md5: 2d8cbaa2f8c63af8e1dfca67f8d6243c
+      size: 124685
     - path: ./data/test_train_blast_metrics.json
       hash: md5
-      md5: e67cfa3797f8ec447763866493e71735
-      size: 597
+      md5: a948a2fe8397f44fbf23d213df8ce042
+      size: 601
   train:
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
       scripts/train.py
@@ -76,8 +76,8 @@ stages:
       size: 524
     - path: ./data/dataset/
       hash: md5
-      md5: 7aa97d73943bf6f6239971cc6fc3274c.dir
-      size: 20176630434
+      md5: 56fcfb97dc44221059f2f88d6a0abfff.dir
+      size: 20176618266
       nfiles: 24
     - path: ./scripts/train.py
       hash: md5
@@ -116,26 +116,26 @@ stages:
     outs:
     - path: ./data/nomelt-model/live/metrics.json
       hash: md5
-      md5: fe0f32b6ebc4849471aace466931e1b7
-      size: 392
+      md5: cac471045f999bf8b0b97f739e164e0b
+      size: 390
     - path: ./data/nomelt-model/live/plots/
       hash: md5
-      md5: 083c4478da70c3a57c02cb79f0cb1184.dir
-      size: 30266
+      md5: 86f3e41699e6e48c8223bb0874ecdf84.dir
+      size: 34687
       nfiles: 11
     - path: ./data/nomelt-model/live/report.md
       hash: md5
-      md5: 50b1b02ebabb75509e6d3f5df3ee8c0c
+      md5: 269db379957fb781d64615d45221c358
       size: 1281
     - path: ./data/nomelt-model/live/static/
       hash: md5
-      md5: ec08263e6d82b2f259b1ad82619c957c.dir
-      size: 257962
+      md5: 05ded1948dad0a7d8f648b2859eb7d6d.dir
+      size: 268742
       nfiles: 11
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 4642696861f264529510b2259bef388d.dir
-      size: 283788081717
+      md5: 6b5612c36951f10b4fa70212c7fc39b7.dir
+      size: 283788179784
       nfiles: 272
   make_predictions:
     cmd: accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml

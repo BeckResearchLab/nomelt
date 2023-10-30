@@ -1,14 +1,14 @@
 {
-    "loss": 0.1881,
-    "learning_rate": 7.635220125786164e-05,
-    "epoch": 0.16,
-    "step": 632,
-    "eval_loss": 1.1643693447113037,
-    "eval_runtime": 15.5029,
-    "eval_samples_per_second": 64.504,
-    "eval_steps_per_second": 0.516,
-    "train_runtime": 39481.5922,
-    "train_samples_per_second": 50.136,
-    "train_steps_per_second": 0.045,
-    "train_loss": 0.8199769622270712
+    "loss": 0.171,
+    "learning_rate": 7.165012406947891e-05,
+    "epoch": 0.18,
+    "step": 728,
+    "eval_loss": 0.8939168453216553,
+    "eval_runtime": 15.3817,
+    "eval_samples_per_second": 65.012,
+    "eval_steps_per_second": 0.52,
+    "train_runtime": 45531.1307,
+    "train_samples_per_second": 44.077,
+    "train_steps_per_second": 0.039,
+    "train_loss": 0.7437452000435705
 }

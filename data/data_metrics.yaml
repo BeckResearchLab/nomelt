@@ -1,7 +1,7 @@
-clusters_n_eval: 4191
-clusters_n_test: 4657
-clusters_n_train: 37718
-data_co2: 0.012393607874674686
-data_n_eval: 167961
-data_n_test: 588637
-data_n_train: 3958908
+clusters_n_eval: 7734
+clusters_n_test: 8594
+clusters_n_train: 69603
+data_co2: 0.0511813501145627
+data_n_eval: 303577
+data_n_test: 398140
+data_n_train: 4013789
