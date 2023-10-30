@@ -103,7 +103,9 @@ stages:
       - ./scripts/score_predictions.py
       - ./data/nomelt-model/predictions.tsv
     outs:
-      - ./data/nomelt-model/test_scores.json
+      - ./data/nomelt-model/test_scores.json:
+          cache: false
+
 # call the model to generate thermostable variant of enh1
   translate_enh1:
     wdir: ./
