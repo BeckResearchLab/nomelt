@@ -244,13 +244,13 @@ stages:
       size: 554951
     - path: ./scripts/compare_structure.py
       hash: md5
-      md5: 1326a65540fd56a0e7bef9547f8bc414
-      size: 10247
+      md5: 249ef9e5716a9b42c3f137975c9fabfa
+      size: 10311
     outs:
     - path: ./data/nomelt-model/structure_metrics.json
       hash: md5
-      md5: 3d80157ce6c7486777eee74db17039cc
-      size: 73
+      md5: 9cb68fa0b923698b9cdd92d905c0708d
+      size: 106
   translate_enh1:
     cmd: python scripts/translate_enh1.py
     deps:

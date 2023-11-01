@@ -67,23 +67,24 @@ def process_pdbs_dssp(pdbs, device=None, output_file=None):
 
     return results
 
-def js_divergence(p, q):
+def js_divergence(p, q, epsilon=1e-10):
     """
     Compute the JS divergence between two distributions for secondary structure
     categories
     """
     assert len(p) == len(q)
     assert set(p.keys()) == set(q.keys())
+    
     # compute the mean distribution
-    m = {}
-    for k in p.keys():
-        m[k] = (p[k] + q[k]) / 2
-    # remove 0.0 values
-    m = {k: v for k, v in m.items() if v != 0.0}
-
-    # compute the KL divergences
-    kl_pm = sum([p[k] * np.log2(p[k] / m[k]) for k in m.keys()])
-    kl_qm = sum([q[k] * np.log2(q[k] / m[k]) for k in m.keys()])
+    m = {k: (p[k] + q[k]) / 2 for k in p.keys()}
+    
+    # KL divergence with handling for zero probabilities
+    def kl_divergence(x, y):
+        return sum([x[k] * np.log2((x[k] + epsilon) / (y[k] + epsilon)) if x[k] != 0 else 0 for k in x.keys()])
+    
+    kl_pm = kl_divergence(p, m)
+    kl_qm = kl_divergence(q, m)
+    
     return (kl_pm + kl_qm) / 2
     
 
@@ -93,7 +94,7 @@ def _run_fatcat1(ins):
         logger.info(f"Fatcat file {i} already exists, skipping")
         with open(f'./tmp/fatcat/fatcat_{i}.txt', 'r') as f:
             pdb1, pdb2, p_value = f.read().strip().split()
-        return p_value
+        return float(p_value)
     command = [
         'FATCAT',
         '-p1', os.path.basename(pdb1),
@@ -243,7 +244,7 @@ if __name__ == '__main__':
                 p_ss[letter] = 0
         # compute jenson shannon divergence
         js_ss = js_divergence(t_ss, p_ss)
-        logger.info(f"JS divergence for secondary structure: {js_ss}")
+        logger.info(f"{t_ss}, {p_ss} JS divergence for secondary structure: {js_ss}")
         jss.append(js_ss)
     
     metrics = {
