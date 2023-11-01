@@ -201,9 +201,9 @@ stages:
     deps:
     - path: ./data/dataset
       hash: md5
-      md5: e029f21a6979379716da746c6b239aee.dir
-      size: 2396568194
-      nfiles: 15
+      md5: 2c8a92a27cee7e0585d154ba1960f7f5.dir
+      size: 20196520698
+      nfiles: 33
     - path: ./scripts/proof_of_principle/natural_diversity_entropy.py
       hash: md5
       md5: c91a2e6c91b0c330a6ee027f065b7e66
