@@ -42,9 +42,9 @@ stages:
       size: 159
     - path: ./data/dataset/
       hash: md5
-      md5: 56fcfb97dc44221059f2f88d6a0abfff.dir
-      size: 20176618266
-      nfiles: 24
+      md5: 4d54a3ebbad1c15ff712fe9ba0b60ea3.dir
+      size: 20196394186
+      nfiles: 32
   blast_test_train:
     cmd: python scripts/blast_test_train.py
     deps:
@@ -185,8 +185,8 @@ stages:
     deps:
     - path: ./data/nomelt-model/predictions.tsv
       hash: md5
-      md5: 1272601acd644ec6b0ba762df6f05ace
-      size: 214718
+      md5: 720c39c021fbfe4a22a4976086e1fbf8
+      size: 554951
     - path: ./scripts/compare_sequence_alignment.py
       hash: md5
       md5: 78aa3fd9a637f6b55a83c940e1bca96f
@@ -194,8 +194,8 @@ stages:
     outs:
     - path: ./data/nomelt-model/test_predictions_aligned_results.json
       hash: md5
-      md5: d2de03e6e141ad315761a1133a35717b
-      size: 749515
+      md5: f06f2ecf2cee2898f87a3341152121d1
+      size: 1896723
   natural_diversity_entropy:
     cmd: python scripts/proof_of_principle/natural_diversity_entropy.py
     deps:
@@ -218,34 +218,39 @@ stages:
     deps:
     - path: ./data/dataset/
       hash: md5
-      md5: 7415c0cd0df9964297d1b61df5341438.dir
-      size: 830493755
-      nfiles: 19
+      md5: 4d54a3ebbad1c15ff712fe9ba0b60ea3.dir
+      size: 20196394186
+      nfiles: 32
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 0a7e1478be1ef88037da4c451afd3c13.dir
-      size: 124037480969
-      nfiles: 107
+      md5: 6b5612c36951f10b4fa70212c7fc39b7.dir
+      size: 283788179784
+      nfiles: 272
     - path: ./scripts/compute_test_embeddings.py
       hash: md5
-      md5: 7daae1c976e7e416d8972f32bac98073
-      size: 5851
+      md5: 58ecaf32c14b6f218b22b7cbf7a4945f
+      size: 6405
+    outs:
+    - path: ./data/nomelt-model/test_loss.json
+      hash: md5
+      md5: c19777649cab56e690fe5a89c1068929
+      size: 33
   compare_structure:
     cmd: python scripts/compare_structure.py
     deps:
     - path: ./data/nomelt-model/predictions.tsv
       hash: md5
-      md5: 1272601acd644ec6b0ba762df6f05ace
-      size: 214718
+      md5: 720c39c021fbfe4a22a4976086e1fbf8
+      size: 554951
     - path: ./scripts/compare_structure.py
       hash: md5
-      md5: dba7236a1abaa1022269338f8ed493d4
-      size: 10433
+      md5: 1326a65540fd56a0e7bef9547f8bc414
+      size: 10247
     outs:
     - path: ./data/nomelt-model/structure_metrics.json
       hash: md5
-      md5: 164a3cab77a8517428b51a06b7b6337f
-      size: 110
+      md5: 3d80157ce6c7486777eee74db17039cc
+      size: 73
   translate_enh1:
     cmd: python scripts/translate_enh1.py
     deps:

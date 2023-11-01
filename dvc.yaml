@@ -82,6 +82,56 @@ stages:
     plots:
       - ./data/nomelt-model/live/static/:
           cache: false
+  train_all:
+    wdir: ./
+    cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train_all.py 
+    deps:
+      - ./scripts/train_all.py
+      - ./data/dataset/
+      - ./.config/accelerate/default_config.yaml
+    params:
+      - model.pretrained_model
+      - model.task
+      - model.generation_max_length
+      - model.model_hyperparams
+      - training.reweight
+      - training.freeze_early_layers
+      - training.dev_sample_data
+      - training.per_device_batch_size
+      - training.gradient_accumulation
+      - training.auto_find_batch_size
+      - training.evals_per_save
+      - training.evals_per_epoch
+      - training.epochs
+      - training.gradient_checkpointing
+      - training.learning_rate
+      - training.lr_scheduler_type
+      - training.label_smoothing_factor
+      - training.warmup_ratio
+      - training.optim
+      - training.optim_args
+      - training.eval_single_example_per_cluster
+      - training.fp16
+      - training.bf16
+      - training.early_stopping
+      - training.early_stopping_patience
+      - training.early_stopping_threshold
+    outs:
+      - ./data/nomelt-model-full/model/:
+          persist: true
+      - ./data/nomelt-model-full/live/report.md:
+          cache: false
+      - ./data/ds_cache/full_dataset_tokenized.arrow
+      - ./data/ds_cache/full_dataset_weighted.arrow
+    metrics:
+      - ./data/nomelt-model-full/live/metrics.json:
+          cache: false
+      - ./data/nomelt-model-full/live/plots/:
+          cache: false
+          persist: true
+    plots:
+      - ./data/nomelt-model/live-full/static/:
+          cache: false
 # run the model on test set and save generated sequences
   make_predictions:
     wdir: ./
@@ -184,6 +234,9 @@ stages:
       - ./scripts/compute_test_embeddings.py
       - ./data/dataset/
       - ./data/nomelt-model/model/
+    metrics:
+      - ./data/nomelt-model/test_loss.json:
+          cache: false
   # compare generated to thermophilic structures
   compare_sequence_alignment:
     wdir: ./

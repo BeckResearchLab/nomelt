@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 import re
+import json
 import torch
 import pprint
 from yaml import safe_load, dump
@@ -79,6 +80,9 @@ def main():
         cluster_dict[clust] = i
     keep_indexes = set(cluster_dict.values())
     dataset = dataset.filter(lambda x, idx: idx in keep_indexes, with_indices=True)
+    if len(dataset) > 1000:
+        dataset = dataset.shuffle(seed=42).select(range(1000))
+        logger.info(f"Shuffled and selected 1000 sequences. New size: {dataset}")
     dataset.save_to_disk('./tmp/test_embeddings')
     dataset = load_from_disk('./tmp/test_embeddings')
     logger.info(f"Keeping only extreme cluster and unique sequences. New size: {dataset}")
@@ -146,6 +150,13 @@ def main():
     logger.info(f"Saving to disk.")
     dataset.save_to_disk('./data/nomelt-model/test_embeddings')
     dataset.cleanup_cache_files()
+
+    # get total residue wise test loss and save to disk
+    logger.info(f"Calculating total loss.")
+    total_loss = torch.sum(dataset['token_mean_loss'].view(-1) * dataset['thermo_seq_len'].view(-1)) / torch.sum(dataset['thermo_seq_len'].view(-1))
+
+    with open('./data/nomelt-model/test_loss.json', 'w') as f:
+        json.dump({'test_loss': total_loss.item()}, f)
         
     try:
         tracker.stop()

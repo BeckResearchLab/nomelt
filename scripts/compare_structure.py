@@ -155,16 +155,13 @@ if __name__ == '__main__':
     tracker.start()
 
     # get the saved predicted sequences
-    predictions = pd.read_csv('./data/nomelt-model/predictions.tsv', sep='\t', header=None)
-    predictions.columns = ['meso', 'gen', 'thermo']
-    # remove spaces in all values in teh dataframe
-    predictions = predictions.applymap(lambda x: ''.join(str(x).split()))
+    predictions = pd.read_csv('./data/nomelt-model/predictions.tsv', sep='\t')
 
     # get the pids for thermophilic sequences from the dataset
     logger.info("Getting pids for thermophilic sequences from duckdb")
     conn = ddb.connect('./data/database.ddb', read_only=True)
     conn.execute("CREATE INDEX seqs ON proteins(protein_seq)")
-    seqs = predictions['thermo'].unique().tolist()
+    seqs = predictions['label'].unique().tolist()
     placeholders = ', '.join(['?' for _ in seqs])
     query = f"SELECT pid, protein_seq FROM proteins WHERE protein_seq IN ({placeholders})"
     thermo_pids_map = conn.execute(query, parameters=seqs).df()
@@ -174,7 +171,7 @@ if __name__ == '__main__':
     logger.info(f"Have pids for thermophilic sequences. Found {len(thermo_pids_map)} out of {len(seqs)}")
 
     # get rid of examples that we couldn't find structures
-    predictions = predictions[predictions['thermo'].isin(thermo_pids_map.keys())]
+    predictions = predictions[predictions['label'].isin(thermo_pids_map.keys())]
 
     # query alphafold for pdb structures for each thermo sequence
     # download the structures to file
@@ -194,7 +191,7 @@ if __name__ == '__main__':
             logger.warning(f"Could not download {filename}")
         logger.info(f"Done with {filename}")
         time.sleep(1)
-    thermo_structures_list = [f'./tmp/alphafold_downloads/{thermo_pids_map[seq]}.pdb' for seq in predictions['thermo']]
+    thermo_structures_list = [f'./tmp/alphafold_downloads/{thermo_pids_map[seq]}.pdb' for seq in predictions['label']]
     predictions['thermo_pdbs'] = thermo_structures_list
     # make sure each file exists, if not, remove the row
     predictions = predictions[predictions['thermo_pdbs'].apply(lambda x: os.path.exists(x))]
@@ -206,7 +203,7 @@ if __name__ == '__main__':
     
     predicted_structures_list = []
     for i, row in predictions.iterrows():
-        predicted_structures_list.append(esm_one_struc(i, row['gen']))
+        predicted_structures_list.append(esm_one_struc(i, row['prediction']))
 
     # for each pair, comapre secondary structure distributions and FATCAT alignment scores
     logger.info("Comparing secondary structure distributions and FATCAT alignment scores")
