@@ -322,3 +322,74 @@ stages:
       hash: md5
       md5: 6d760c2e03b187e98e2d8d3ee8ad546a
       size: 12214
+  train_all:
+    cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml
+      scripts/train_all.py
+    deps:
+    - path: ./.config/accelerate/default_config.yaml
+      hash: md5
+      md5: 944c78dde32aae09fb317726c143df3a
+      size: 524
+    - path: ./data/dataset/
+      hash: md5
+      md5: 4d54a3ebbad1c15ff712fe9ba0b60ea3.dir
+      size: 20196394186
+      nfiles: 32
+    - path: ./scripts/train_all.py
+      hash: md5
+      md5: e7f956f3fb367b5b7699ee5ccc717c59
+      size: 13547
+    params:
+      params.yaml:
+        model.generation_max_length: 250
+        model.model_hyperparams:
+          dropout_rate: 0.1
+          relative_attention_max_distance: 250
+        model.pretrained_model: Rostlab/prot_t5_xl_uniref50
+        model.task: translation
+        training.auto_find_batch_size: false
+        training.bf16: true
+        training.dev_sample_data: false
+        training.early_stopping: true
+        training.early_stopping_patience: 4
+        training.early_stopping_threshold: 0.01
+        training.epochs: 0.5
+        training.eval_single_example_per_cluster: true
+        training.evals_per_epoch: 500
+        training.evals_per_save: 3
+        training.fp16: false
+        training.freeze_early_layers: 0.2
+        training.gradient_accumulation: 8
+        training.gradient_checkpointing: true
+        training.label_smoothing_factor: 0.001
+        training.learning_rate: 0.0001
+        training.lr_scheduler_type: linear
+        training.optim: adamw_hf
+        training.optim_args:
+        training.per_device_batch_size: 20
+        training.reweight: false
+        training.warmup_ratio: 0.1
+    outs:
+    - path: ./data/nomelt-model-full/live/metrics.json
+      hash: md5
+      md5: 8e93b09483a0458fa67d09e0761d7b7e
+      size: 232
+    - path: ./data/nomelt-model-full/live/plots/
+      hash: md5
+      md5: b4289512b05aff3d59da8448b3a591f5.dir
+      size: 33714
+      nfiles: 7
+    - path: ./data/nomelt-model-full/live/report.md
+      hash: md5
+      md5: 30df13390f7a7fc690a852ff6609cecd
+      size: 796
+    - path: ./data/nomelt-model-full/live/static/
+      hash: md5
+      md5: c349fdaa96cf470f42ca5f00e90ca1b8.dir
+      size: 135981
+      nfiles: 7
+    - path: ./data/nomelt-model-full/model/
+      hash: md5
+      md5: 475cac1353e35b4ad63dc8b253151906.dir
+      size: 40406837410
+      nfiles: 41

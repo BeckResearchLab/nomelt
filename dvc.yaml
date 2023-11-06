@@ -121,8 +121,6 @@ stages:
           persist: true
       - ./data/nomelt-model-full/live/report.md:
           cache: false
-      - ./data/ds_cache/full_dataset_tokenized.arrow
-      - ./data/ds_cache/full_dataset_weighted.arrow
     metrics:
       - ./data/nomelt-model-full/live/metrics.json:
           cache: false
@@ -130,7 +128,7 @@ stages:
           cache: false
           persist: true
     plots:
-      - ./data/nomelt-model/live-full/static/:
+      - ./data/nomelt-model-full/live/static/:
           cache: false
 # run the model on test set and save generated sequences
   make_predictions:
