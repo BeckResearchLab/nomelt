@@ -306,3 +306,19 @@ stages:
       hash: md5
       md5: fddffa57d4dd446553f90303f8ebeb98
       size: 53
+  data_estimator_distribution:
+    cmd: python scripts/data_estimator_distribution.py
+    deps:
+    - path: ./data/nomelt-model/predictions.tsv
+      hash: md5
+      md5: 720c39c021fbfe4a22a4976086e1fbf8
+      size: 554951
+    - path: ./scripts/data_estimator_distribution.py
+      hash: md5
+      md5: 2155430a3588de4fec1c47d45db82d59
+      size: 5538
+    outs:
+    - path: ./data/thermo_gen_estimated.json
+      hash: md5
+      md5: 6d760c2e03b187e98e2d8d3ee8ad546a
+      size: 12214

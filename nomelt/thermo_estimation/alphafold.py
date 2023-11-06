@@ -149,64 +149,73 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
         self.pdb_files_history = {}
 
     def generate_alphafold_ensembles(self, sequences: list[str], ids: list[str]):
-        # in case the wdir has changed in the estimator, update it in the af params
+        # Update output_dir
         self.af_params.output_dir = self.args.wdir
-        # Run AlphaFold multiple times (num_replicates) as per the requirements
+        
         output_type = 'relaxed' if self.args.use_relaxed else 'unrelaxed'
         files_dict = {}
-
-        # check if the outputs already exist
-        finished_ids = []
-        for sequence_id in ids:
-            if os.path.exists(os.path.join(self.args.wdir, str(sequence_id))):
-                logger.info(f"Found existing output directory for {sequence_id}.")
-                replicates_found = 0
-                for file in os.listdir(os.path.join(self.args.wdir, str(sequence_id))):
-                    if 'ensemble_replicate' in file:
-                        replicates_found += 1
-                if replicates_found >= self.args.num_replicates:    
-                    files_dict[sequence_id] = os.path.join(self.args.wdir, str(sequence_id))
-                    logger.info(f"Found {replicates_found} replicates for {sequence_id}. Skipping AF run")
-                    finished_ids.append(sequence_id)
-        sequences_to_run = []
-        ids_to_run = []
-        for i, id_ in enumerate(ids):
-            if id_ not in finished_ids:
-                sequences_to_run.append(sequences[i])
-                ids_to_run.append(id_)
-        if len(sequences_to_run) == 0:
+        replicates_to_run = {}  # New dictionary to keep track of remaining replicates for each ID
+        
+        # Check existing outputs
+        for sequence_id, sequence in zip(ids, sequences):
+            path = os.path.join(self.args.wdir, str(sequence_id))
+            if os.path.exists(path):
+                existing_replicates = sum('ensemble_replicate' in file for file in os.listdir(path))
+                remaining_replicates = self.args.num_replicates - existing_replicates
+                
+                if remaining_replicates <= 0:
+                    logger.info(f"Found existing output with enough replicates for {sequence_id}. Skipping.")
+                    files_dict[sequence_id] = path
+                    continue
+                
+                replicates_to_run[sequence_id] = remaining_replicates
+            else:
+                replicates_to_run[sequence_id] = self.args.num_replicates
+        
+        if not replicates_to_run:
             logger.info("No sequences to run. Skipping AF run.")
             return files_dict
-        else:
+
+        logger.info(f"Running AF on `ids: number of replicates remaining`. {replicates_to_run}.")
+        
+        for replicate in range(self.args.num_replicates):
+            # Filter sequences and IDs to those that need more replicates
+            sequences_to_run = [seq for id_, seq in zip(ids, sequences) if replicates_to_run.get(id_, 0) > 0]
+            ids_to_run = [id_ for id_ in ids if replicates_to_run.get(id_, 0) > 0]
+            
+            if not sequences_to_run:
+                break
+            
             logger.info(f"Running AF on {ids_to_run}.")
 
-        for replicate in range(self.args.num_replicates):
-            if replicate == 0 and not self.args.fix_msas:
-                self.af_params.use_precomputed_msas = False
-            else:
-                self.af_params.use_precomputed_msas = True
+            self.af_params.use_precomputed_msas = bool(replicate) or self.args.fix_msas
 
             time0 = time.time()
             run_alphafold(sequences_to_run, ids_to_run, self.af_params)
             time1 = time.time()
+            
             logger.info(f"Finished replicate {replicate}. Time taken: {(time1 - time0)/60} mins.")
-
-            # Rename the output files to include the replicate number
+            
+            # Rename output files and update replicates_to_run
             for sequence_id in ids_to_run:
-                sequence_dir = None
-                for file in os.listdir(self.args.wdir):
-                    if file == str(sequence_id) and os.path.isdir(os.path.join(self.args.wdir, file)):
-                        sequence_dir = os.path.abspath(os.path.join(self.args.wdir, file))
-                        if sequence_id not in files_dict:
-                            files_dict[sequence_id] = sequence_dir
-                if sequence_dir is None:
-                    raise Exception(f"Could not find directory for sequence ID {sequence_id}.")
+                sequence_dir = os.path.join(self.args.wdir, str(sequence_id))
+                if sequence_id not in files_dict:
+                    files_dict[sequence_id] = sequence_dir
+
+                # if there were replicates here earlier that were already renamed,
+                # we want to start at the end of the number of replicates intsead of at 0 again, lest we overwrite existing files
+                current_replicate_over_sessions = sum('ensemble_replicate' in file for file in os.listdir(sequence_dir))
+
                 for file in os.listdir(sequence_dir):
                     if file.endswith('.pdb') and output_type in file:
                         old_name = os.path.join(sequence_dir, file)
-                        new_name = os.path.join(sequence_dir, f"ensemble_replicate_{replicate}.pdb")
+                        new_name = os.path.join(sequence_dir, f"ensemble_replicate_{current_replicate_over_sessions}.pdb")
                         shutil.move(old_name, new_name)
                         logger.debug(f"Renamed {old_name} to {new_name}.")
+                
+                # Decrease remaining replicates for this sequence_id
+                replicates_to_run[sequence_id] -= 1
+
         return files_dict
 
     def compute_ensemble_energies(self, ids: list[str]) -> Dict[str, float]:

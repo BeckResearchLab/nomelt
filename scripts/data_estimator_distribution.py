@@ -9,6 +9,8 @@ import optuna.samplers
 from dask_cuda import LocalCUDACluster
 from dask.distributed import Client, wait
 from dask.distributed import get_worker
+import dask
+import dask.distributed
 import codecarbon
 import torch
 import pandas as pd
@@ -18,6 +20,8 @@ from nomelt.thermo_estimation.rosetta import RosettaMinimizationParameters
 
 import logging
 logger = logging.getLogger(__name__)
+
+dask.config.set({'distributed.comm.timeouts.tcp': '900s', 'distributed.comm.timeouts.connect': '900s', 'distributed.scheduler.worker-ttl': None})
 
 if 'LOGLEVEL' in os.environ:
     LOGLEVEL = os.environ['LOGLEVEL']
@@ -49,7 +53,7 @@ def main():
 
     # start a dask cluster
     N_GPUS = torch.cuda.device_count()
-    cluster = LocalCUDACluster(n_workers=7, threads_per_worker=1)
+    cluster = LocalCUDACluster(n_workers=1, threads_per_worker=1)
     client = Client(cluster)
     logger.info(f"Starting cluster with config: {cluster.__dict__}")
 
@@ -71,6 +75,9 @@ def main():
     estimator = estimator_class(args=estimator_args)
     logger.info(f"Using estimator {estimator_class.__name__} with args {estimator_args}.")
 
+    if not os.path.exists('./tmp/training_data_estimation_results'):
+        os.mkdir('./tmp/training_data_estimation_results')
+
     def _worker_function(estimator, sequences, ids):
         logger = logging.getLogger('root')
         logger.setLevel(logging.INFO)
@@ -79,17 +86,25 @@ def main():
         formatter = logging.Formatter(f'WORKER {wid} '+'%(filename)-12s %(asctime)s;%(funcName)-12s: %(levelname)-8s %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
-        result = estimator.run(sequences, ids)
-        return result
+        # if the result exists, load it
+        if os.path.exists(f'./tmp/training_data_estimation_results/{wid}.json'):
+            with open(f'./tmp/training_data_estimation_results/{wid}.json', 'r') as f:
+                result = json.load(f)
+            return result
+        else:
+            result = estimator.run(sequences, ids)
+
+            # save the results
+            for k, v in result.items():
+                with open(f'./tmp/training_data_estimation_results/{k}.json', 'w') as f:
+                    json.dump({k: v}, f, indent=4)
+            return result
     
     # load sequences from dataset
-    df = pd.read_csv('./data/nomelt-model/predictions.tsv', header=None, sep='\t')
-    meso_sequences = df[0][:N_PAIRS]
-    thermo_sequences = df[2][:N_PAIRS]
-    trans_sequences = df[1][:N_PAIRS]
-    meso_sequences = [''.join(s.split()) for s in meso_sequences]
-    thermo_sequences = [''.join(s.split()) for s in thermo_sequences]
-    trans_sequences = [''.join(s.split()) for s in trans_sequences]
+    df = pd.read_csv('./data/nomelt-model/predictions.tsv', sep='\t')
+    meso_sequences = list(df['input'][:N_PAIRS])
+    thermo_sequences = list(df['label'][:N_PAIRS])
+    trans_sequences = list(df['prediction'][:N_PAIRS])
 
     ids = list(range(N_PAIRS))
     meso_ids = [f'meso_{i}' for i in ids]
