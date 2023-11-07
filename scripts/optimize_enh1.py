@@ -91,9 +91,10 @@ def main():
     with open('./data/enh/translate_enh1.json', 'r') as f:
         _ = json.load(f)
         trans_seq = _['generated']
+        original = _['original']
 
     optimizer = MutationSubsetOptimizer(
-        "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK",
+        original,
         trans_seq,
         args=optimizer_args,
         name='enh_vs_translate',

@@ -256,13 +256,13 @@ stages:
     deps:
     - path: ./data/nomelt-model/model/
       hash: md5
-      md5: 0a7e1478be1ef88037da4c451afd3c13.dir
-      size: 124037480969
-      nfiles: 107
+      md5: 6b5612c36951f10b4fa70212c7fc39b7.dir
+      size: 283788179784
+      nfiles: 272
     - path: ./scripts/translate_enh1.py
       hash: md5
-      md5: 407378273e838eb20aa9b0f5e2f8ed83
-      size: 1043
+      md5: d397e2e9f337263630b8e60d3941db76
+      size: 1048
     params:
       params.yaml:
         model.generation_max_length: 250
@@ -270,8 +270,8 @@ stages:
     outs:
     - path: ./data/enh/translate_enh1.json
       hash: md5
-      md5: b496f100a75d26cb1360891142f28827
-      size: 170
+      md5: 66bfc9352d449525ee99d06707aa3a9d
+      size: 172
   estimate_trans_energy_enh1:
     cmd: python scripts/estimate_trans_energy_enh1.py
     deps:
@@ -281,12 +281,12 @@ stages:
       size: 275
     - path: ./data/enh/translate_enh1.json
       hash: md5
-      md5: b496f100a75d26cb1360891142f28827
-      size: 170
+      md5: 66bfc9352d449525ee99d06707aa3a9d
+      size: 172
     - path: scripts/estimate_trans_energy_enh1.py
       hash: md5
-      md5: a2085845540fefcaf3b66e745e87cbf0
-      size: 1382
+      md5: 64b45fecf9c82bb671be17dd2eef8279
+      size: 1431
     params:
       params.yaml:
         optimize.estimator: mAFminDGEstimator
@@ -299,13 +299,13 @@ stages:
     outs:
     - path: ./data/enh/initial_estimate/
       hash: md5
-      md5: 3ae1a953073e60125e36925cbe105999.dir
-      size: 14172160
-      nfiles: 39
+      md5: 06e72e8e798d055b7149dccd1537b37f.dir
+      size: 28622210
+      nfiles: 77
     - path: ./data/enh/translated_energy_enh1.json
       hash: md5
-      md5: fddffa57d4dd446553f90303f8ebeb98
-      size: 53
+      md5: 45c3d82b37e229be2a6d2ae2c74361a6
+      size: 103
   data_estimator_distribution:
     cmd: python scripts/data_estimator_distribution.py
     deps:
@@ -393,3 +393,51 @@ stages:
       md5: 475cac1353e35b4ad63dc8b253151906.dir
       size: 40406837410
       nfiles: 41
+  optimize_enh1:
+    cmd: python scripts/optimize_enh1.py
+    deps:
+    - path: ./data/enh/translate_enh1.json
+      hash: md5
+      md5: 66bfc9352d449525ee99d06707aa3a9d
+      size: 172
+    - path: ./scripts/optimize_enh1.py
+      hash: md5
+      md5: 2fc7e39a777bec95c85a61d735ca579b
+      size: 4559
+    params:
+      params.yaml:
+        optimize.cut_tails:
+        optimize.direction: minimize
+        optimize.estimator: mAFminDGEstimator
+        optimize.estimator_args:
+          af_params: ./.config/af_singularity_config.yaml
+          use_relaxed: false
+          num_replicates: 25
+          fix_msas: true
+          residue_length_norm: true
+        optimize.gap_compressed_mutations: true
+        optimize.gapextend: -1
+        optimize.gapopen: -4
+        optimize.match_score: 1
+        optimize.matrix: BLOSUM62
+        optimize.mismatch_score: -1
+        optimize.n_trials: 100
+        optimize.optuna_overwrite: true
+        optimize.penalize_end_gaps: false
+        optimize.sampler: NSGAIISampler
+        optimize.sampler_args:
+          population_size: 10
+    outs:
+    - path: ./data/enh/optimize_enh1/
+      hash: md5
+      md5: 796bcae8d3bed0be9cb132d5a51af23c.dir
+      size: 1416543
+      nfiles: 1
+    - path: ./data/enh/optimize_enh1_results.json
+      hash: md5
+      md5: a43c2cba4252f773bb227155f8e6dcf4
+      size: 252
+    - path: ./data/enh/optimize_enh1_trials.csv
+      hash: md5
+      md5: b7af82bef095745c20e6b8072ec16c7a
+      size: 82695

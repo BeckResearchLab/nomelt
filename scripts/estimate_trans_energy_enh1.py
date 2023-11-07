@@ -33,12 +33,14 @@ if __name__ == '__main__':
     with open('./data/enh/translate_enh1.json', 'r') as f:
         _ = json.load(f)
         ENH1_TRANSLATED = _['generated']
+        ENH1 = _['original']
 
     estimator = mAFminDGEstimator(args=estimator_args)
     sequences = [
+        ENH1,
         ENH1_TRANSLATED
     ]
-    ids = ["trans"]
+    ids = ["wt", "trans"]
     outs = estimator.run(sequences=sequences, ids=ids)
     tracker.stop()
     with open('./data/enh/translated_energy_enh1.json', 'w') as f:

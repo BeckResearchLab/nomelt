@@ -8,7 +8,7 @@ def main(sequence):
     with open('./params.yaml', 'r') as f:
         params = safe_load(f)
 
-    model = NOMELTModel('./data/nomelt-model/model/', **params['model']['model_hyperparams'])
+    model = NOMELTModel('./data/nomelt-model-full/model/', **params['model']['model_hyperparams'])
 
     generated_sequences = model.translate_sequences(
         [sequence],
