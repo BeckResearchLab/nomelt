@@ -254,11 +254,11 @@ stages:
   translate_enh1:
     cmd: python scripts/translate_enh1.py
     deps:
-    - path: ./data/nomelt-model/model/
+    - path: ./data/nomelt-model-full/model/
       hash: md5
-      md5: 6b5612c36951f10b4fa70212c7fc39b7.dir
-      size: 283788179784
-      nfiles: 272
+      md5: 475cac1353e35b4ad63dc8b253151906.dir
+      size: 40406837410
+      nfiles: 41
     - path: ./scripts/translate_enh1.py
       hash: md5
       md5: d397e2e9f337263630b8e60d3941db76
@@ -469,3 +469,15 @@ stages:
       hash: md5
       md5: c090dd550bc7ad97cc26d5d403590291
       size: 250
+  consensus_estimated:
+    cmd: python scripts/proof_of_principle/consensus_estimated.py
+    deps:
+    - path: ./scripts/proof_of_principle/consensus_estimated.py
+      hash: md5
+      md5: 45f6a66beffa19581018dd2e7e1570b9
+      size: 1259
+    outs:
+    - path: ./data/proof_of_principle/consensus_estimated.json
+      hash: md5
+      md5: 2ae9a64b69a1bc80118326ad1d4992c9
+      size: 60

@@ -16,12 +16,12 @@ estimator_args=mAFminDGArgs(
     af_params='./.config/af_singularity_config.yaml',
     wdir='./tmp/af_dg/',
     use_relaxed=False,
-    num_replicates=50,
+    num_replicates=25,
     fix_msas=True
 )
 if __name__ == '__main__':
     tracker = codecarbon.OfflineEmissionsTracker(
-        project_name="enh1_vs_consensus_in_silico_estimator",
+        project_name="consensus_in_silico_estimator",
         output_dir="./data/",
         country_iso_code="USA",
         region="washington"
@@ -29,11 +29,10 @@ if __name__ == '__main__':
     tracker.start()
     estimator = mAFminDGEstimator(args=estimator_args)
     sequences = [
-        'DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK',
         'RRKRTTFTKEQLEELEELFEKNRYPSAEEREELAKKLGLTERQVKVWFQNRRAKEKK'
     ]
-    ids = ['enh', "consensus-hd"]
+    ids = ["consensus-hd"]
     outs = estimator.run(sequences=sequences, ids=ids)
     tracker.stop()
-    with open('./data/proof_of_principle/enh1_vs_consensus_in_silico_estimator_out.json', 'w') as f:
+    with open('./data/proof_of_principle/consensus_estimated.json', 'w') as f:
         json.dump(outs, f)

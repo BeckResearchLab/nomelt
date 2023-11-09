@@ -160,7 +160,7 @@ stages:
     cmd: python scripts/translate_enh1.py
     deps:
       - ./scripts/translate_enh1.py
-      - ./data/nomelt-model/model/
+      - ./data/nomelt-model-full/model/
     params:
       - model.generation_max_length
       - model.generation_num_beams
@@ -264,6 +264,19 @@ stages:
     outs:
      - ./data/thermo_gen_estimated.json:
          cache: false
+
+  zero_shot_estimation:
+    wdir: ./
+    cmd: python ./scripts/zero_shot_experiment.py
+    deps:
+      - ./scripts/zero_shot_experiment.py
+      - ./data/nomelt-mode-full/model/
+    outs:
+      - ./data/nomelt-model-full/zero_shot_estimated.json:
+          cache: false
+    plots:
+      - ./data/plots/lovd_scores.png:
+          cache: false
 # proof of principle scripts
 #################################
 
@@ -278,13 +291,13 @@ stages:
       - ./data/proof_of_principle/natural_diversity_entropy.json:
           cache: false
 # call the af2dg thermostability estimator the wild type enh and the consensus sequence from literature
-  enh1_vs_consensus_in_silico_estimator:
+  consensus_estimated:
     wdir: ./
-    cmd: python scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+    cmd: python scripts/proof_of_principle/consensus_estimated.py
     deps:
-      - ./scripts/proof_of_principle/enh1_vs_consensus_in_silico_estimator.py
+      - ./scripts/proof_of_principle/consensus_estimated.py
     outs:
-      - ./data/proof_of_principle/enh1_vs_consensus_in_silico_estimator_out.json:
+      - ./data/proof_of_principle/consensus_estimated.json:
           cache: false
 # manually add a few mutations to the wild type enh and call the af2dg thermostability estimator to see how it effects the score
   enh1_vary_mutations:
