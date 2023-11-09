@@ -29,12 +29,11 @@ def parse_blast_output(output_path):
         records = [r for r in parse(f)]
     return records
 
-def run_blast_search(query_sequence, dataset_path, working_dir='./blast_workdir/'):
+def run_blast_search(query_sequence, dataset, working_dir='./blast_workdir/'):
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
 
-    # Load dataset
-    ds = datasets.load_from_disk(dataset_path)['train']
+    ds = dataset
     
     # Create BLAST database
     db_path = create_blast_db(ds, working_dir)
@@ -48,7 +47,7 @@ def run_blast_search(query_sequence, dataset_path, working_dir='./blast_workdir/
     output_path = f'{working_dir}blast_out.tsv'
     cmd = [
         'blastp', '-db', db_path, '-query', query_file_path,
-        '-evalue', '1.0', '-outfmt', '5', '-out', output_path,
+        '-evalue', '2.0', '-outfmt', '5', '-out', output_path,
         '-num_threads', '32', '-word_size', '3',
         '-matrix', 'BLOSUM62', '-qcov_hsp_perc', '80'
     ]

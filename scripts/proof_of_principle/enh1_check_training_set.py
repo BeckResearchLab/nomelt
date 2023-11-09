@@ -2,12 +2,18 @@
 
 from nomelt.blast import run_blast_search
 import json
+from datasets import load_from_disk, concatenate_datasets
 
 ENH1 = "DKRPRTAFSSEQLARLKREFNENRYLTERRRQQLSSELGLNEAQIKIWFQNKRAKIKK"
 
 
 if __name__ == '__main__':
-    records = run_blast_search(ENH1, './data/dataset', './tmp/blast')
+
+    dataset = load_from_disk('./data/dataset/')
+    dataset = concatenate_datasets([dataset['train'], dataset['eval'], dataset['test']])
+    dataset.save_to_disk('./tmp/dataset-all')
+    
+    records = run_blast_search(ENH1, dataset, './tmp/blast/')
 
     r = records[0]
     alignments = r.alignments

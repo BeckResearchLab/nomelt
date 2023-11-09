@@ -441,3 +441,31 @@ stages:
       hash: md5
       md5: b7af82bef095745c20e6b8072ec16c7a
       size: 82695
+  enh1_in_training_set:
+    cmd: python scripts/proof_of_principle/enh1_check_training_set.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_check_training_set.py
+      hash: md5
+      md5: c69633aa76ec98a6401d04112d8a524e
+      size: 917
+    outs:
+    - path: ./data/enh/training_data_homologs.json
+      hash: md5
+      md5: 28961a1d7a0eca372a6e6c5cc2a16c99
+      size: 72
+  enh1_random_opt:
+    cmd: python scripts/proof_of_principle/enh1_random_opt.py
+    deps:
+    - path: ./scripts/proof_of_principle/enh1_random_opt.py
+      hash: md5
+      md5: e53c4f08416579acf3e90aeadfabaad1
+      size: 5285
+    outs:
+    - path: ./data/proof_of_principle/optimize_enh1_rand_trials.csv
+      hash: md5
+      md5: d3c0d888202498781a35b96b3de595a8
+      size: 79818
+    - path: ./data/proof_of_principle/optimize_enh1_random_results.json
+      hash: md5
+      md5: c090dd550bc7ad97cc26d5d403590291
+      size: 250
