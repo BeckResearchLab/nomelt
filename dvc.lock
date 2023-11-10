@@ -481,3 +481,24 @@ stages:
       hash: md5
       md5: 2ae9a64b69a1bc80118326ad1d4992c9
       size: 60
+  zero_shot_estimation:
+    cmd: python ./scripts/zero_shot_experiment.py
+    deps:
+    - path: ./data/nomelt-model-full/model/
+      hash: md5
+      md5: 475cac1353e35b4ad63dc8b253151906.dir
+      size: 40406837410
+      nfiles: 41
+    - path: ./scripts/zero_shot_experiment.py
+      hash: md5
+      md5: 9a469b9eee9be85a3a193dcdffbf79ea
+      size: 5764
+    outs:
+    - path: ./data/nomelt-model-full/zero_shot_estimated.json
+      hash: md5
+      md5: 094de66e89bb225e18881a564a857670
+      size: 276
+    - path: ./data/plots/lovd_scores.png
+      hash: md5
+      md5: 1520a52b7afd6ab1da04210208a0da06
+      size: 117132

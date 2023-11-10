@@ -33,20 +33,20 @@ LovD_seqs = {
 LovD_temperatures = [38.5, 39.5, 44.0, 44.3, 45.0, 46.0, 52.0, 49.0, 49.3, 50.8]
 
 if __name__ == "__main__":
-    with open('../params.yaml', 'r') as f:
+    with open('./params.yaml', 'r') as f:
         params = safe_load(f)
 
     hyperparams = params['model']['model_hyperparams']
-    model = NOMELTModel('../data/nomelt-model-full/model', **hyperparams)
+    model = NOMELTModel('./data/nomelt-model-full/model', **hyperparams)
 
     lovd_variants = list(LovD_seqs.values())[1:]
-    lovd_wt = full_seqs['LovD']  
+    lovd_wt = LovD_seqs['LovD']  
 
     wt_score, variant_scores = model.score_variants(lovd_wt, lovd_variants)
     lovd_scores = [0.0] + variant_scores
 
     fig, ax = plt.subplots(figsize=(4, 4))
-    sns.regplot(x=lovd_temperatures, y=lovd_scores, ax=ax)
+    sns.regplot(x=LovD_temperatures, y=lovd_scores, ax=ax)
     ax.set_xlabel('Melting Temperature (°C)')
     ax.set_ylabel('NOMELT Logit Score')
 
@@ -54,6 +54,6 @@ if __name__ == "__main__":
     # save the data too
     with open('./data/nomelt-model-full/zero_shot_estimated.json', 'w') as f:
         json.dump(
-            {'lovd': {'temps': lovd_temperatures, 'scores': lovd_scores}},
+            {'lovd': {'temps': LovD_temperatures, 'scores': lovd_scores}},
             f
         )

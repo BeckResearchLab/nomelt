@@ -270,7 +270,7 @@ stages:
     cmd: python ./scripts/zero_shot_experiment.py
     deps:
       - ./scripts/zero_shot_experiment.py
-      - ./data/nomelt-mode-full/model/
+      - ./data/nomelt-model-full/model/
     outs:
       - ./data/nomelt-model-full/zero_shot_estimated.json:
           cache: false
