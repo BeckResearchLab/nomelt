@@ -18,6 +18,7 @@ import duckdb as ddb
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.stats import pearsonr, spearmanr
 import seaborn as sns
 from datasets import load_dataset
 import codecarbon
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     logger.debug(f"Model hyperparams: {hyperparams}")
     
     logger.info("Loading model...")
-    model = NOMELTModel('./data/nomelt-model/model', **hyperparams)
+    model = NOMELTModel('./data/nomelt-model-full/model', **hyperparams)
     logger.info("Model loaded!")
     
     # make into an iterable array
@@ -167,18 +168,68 @@ if __name__ == "__main__":
     logger.info("Plotting...")
     data = pd.read_csv("./data/gym/ESTA_BACSU_Nutschel_2020.csv")
 
+    logger.info("Plotting figure 1, a scatterplot of model score vs DMS score")
     # set data
     x_data = data['DMS_score']
     y_data = variant_scores
+
+    # Calculate Pearson and Spearman coefficients and p-values
+    pearson_coef, pearson_p = pearsonr(x_data, y_data)
+    spearman_coef, spearman_p = spearmanr(x_data, y_data)
+
+    logger.info(f"Pearson correlation coefficient: {pearson_coef}, p-value: {pearson_p}")
+    logger.info(f"Spearman correlation coefficient: {spearman_coef}, p-value: {spearman_p}")
 
     # set figure
     fig, ax= plt.subplots(figsize=(10, 10))
 
     # plot
-    sns.regplot(x=x_data, y=y_data)
-    ax.set_title('Figure 1: model vs DMS (thermostability))')
+    sns.regplot(x=x_data, y=y_data, ax=ax)
+    ax.set_title('Figure 1: model vs DMS (thermostability)')
     ax.set_xlabel('DMS score (exp)')
     ax.set_ylabel('Model score')
+    # annotate with Pearson and Spearman coefficients
+    ax.text(0.05, 0.95, f'Pearson: {pearson_coef:.2f}, p: {pearson_p:.2g}\nSpearman: {spearman_coef:.2f}, p: {spearman_p:.2g}', 
+        transform=ax.transAxes, fontsize=12, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', alpha=0.5))
+
     plt.savefig("./data/gym/analysis/figure1.png")
+    logger.info("Figure 1 saved!")
+
+    logger.info("Figure 2: density plot")
+    # convert to dataframe
+    protein_data = pd.DataFrame({'DMS_score': x_data, 'model_score': y_data})
+
+    # For single-variable density plot
+    plt.figure(figsize=(10, 10))  # Create a new figure
+    sns.kdeplot(data=protein_data['DMS_score'], color="red", fill=True, bw_adjust=0.5)
+    plt.title('Density Plot of DMS Scores')
+    plt.xlabel('DMS score (exp)')
+    plt.savefig("./data/gym/analysis/figure2a.png")
+
+    plt.figure(figsize=(10, 10))  # Create a new figure
+    sns.kdeplot(data=protein_data['model_score'], color="blue", fill=True, bw_adjust=0.5)
+    plt.title('Density Plot of Model Scores')
+    plt.xlabel('Model score')
+    plt.savefig("./data/gym/analysis/figure2b.png")
+    logger.info("Figure 2a and 2b saved!")
+
+    # For two-variable density plot
+    logger.info("Plotting figure 3, a density plot of model score vs DMS score")
+    plt.figure(figsize=(10, 10))  # Create a new figure
+    
+    # create a density plot
+    sns.kdeplot(data=protein_data, x="DMS_score", y="model_score", fill=True, bw_adjust=0.5, cmap="Blues")
+    # adding a regression line
+    sns.regplot(data=protein_data, x='DMS_score', y='model_score', scatter=False, color='red')
+
+    # annotate with Pearson and Spearman coefficients and p-values
+    plt.text(0.05, 0.95, f'Pearson: {pearson_coef:.2f} (p={pearson_p:.2e})\nSpearman: {spearman_coef:.2f} (p={spearman_p:.2e})', 
+             fontsize=12, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', alpha=0.5), transform=plt.gca().transAxes)
+
+    plt.title('Density Plot of DMS vs Model Scores with Regression Line')
+    plt.xlabel('DMS score (exp)')
+    plt.ylabel('Model score')
+    plt.savefig("./data/gym/analysis/figure3.png")
+    logger.info("Figure 3 saved!")
 
 
