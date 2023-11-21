@@ -26,7 +26,7 @@ LOGFILE = f'./logs/{os.path.basename(__file__)}.log'
 
 ## constants
 csv_files = [
-    "BLAT_ECOLX_Deng_2012.csv"
+    "ESTA_BACSU_Nutschel_2020.csv"
 ] # initalize CSVs
 # Base URL for the ProteinGym_substitutions folder (change to indels)
 base_url = "https://huggingface.co/datasets/OATML-Markslab/ProteinGym/raw/main/ProteinGym_substitutions/"
