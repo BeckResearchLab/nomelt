@@ -341,9 +341,9 @@ stages:
           cache: false
   tests_in_training_set:
     wdir: ./
-    cmd: python scripts/proof_of_principle/enh1_check_training_set.py
+    cmd: python scripts/proof_of_principle/check_training_set_for_case_studies.py
     deps:
-      - ./scripts/proof_of_principle/enh1_check_training_set.py
+      - ./scripts/proof_of_principle/check_training_set_for_case_studies.py
     outs:
       -  ./data/enh/training_data_homologs.json:
           cache: false

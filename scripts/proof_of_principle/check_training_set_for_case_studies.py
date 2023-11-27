@@ -13,6 +13,10 @@ def do_one(seq, dataset):
     records = run_blast_search(seq, dataset, './tmp/blast/')
     r = records[0]
     alignments = r.alignments
+    if len(alignments) == 0:
+        e = None
+        s_cov = None
+        q_cov = None
     for a in alignments:
         hsp = a.hsps[0]
         e = hsp.expect

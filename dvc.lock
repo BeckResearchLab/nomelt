@@ -502,3 +502,15 @@ stages:
       hash: md5
       md5: b87c631154fd3cf591985919cfb3dc72
       size: 255366
+  tests_in_training_set:
+    cmd: python scripts/proof_of_principle/check_training_set_for_case_studies.py
+    deps:
+    - path: ./scripts/proof_of_principle/check_training_set_for_case_studies.py
+      hash: md5
+      md5: 76f9d0b97adf134bf5e5d061dae1ad9d
+      size: 1841
+    outs:
+    - path: ./data/enh/training_data_homologs.json
+      hash: md5
+      md5: b784a66ae8ef924c8a4a2cfdbf270d45
+      size: 184
