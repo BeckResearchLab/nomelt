@@ -9,6 +9,7 @@ import json
 import MDAnalysis as mda
 import io
 import copy
+from scipy.stats import spearmanr
 
 from nomelt.model import NOMELTModel
 from yaml import safe_load
@@ -39,6 +40,7 @@ if __name__ == "__main__":
     hyperparams = params['model']['model_hyperparams']
     model = NOMELTModel('./data/nomelt-model-full/model', **hyperparams)
 
+    # start with LovD
     lovd_variants = list(LovD_seqs.values())[1:]
     lovd_wt = LovD_seqs['LovD']  
 
@@ -51,9 +53,82 @@ if __name__ == "__main__":
     ax.set_ylabel('NOMELT Logit Score')
 
     plt.savefig('./data/plots/lovd_scores.png', dpi=300, bbox_inches='tight')
+    # get spearmans
+    lovd_spear_r, lovd_spear_p = spearmanr(LovD_temperatures, lovd_scores)
+
+    # now do lipa
+    LipA = "AEHNPVVMVHGIGGASFNFAGIKSYLVSQGWSRDKLYAVDFWDKTGTNYNNGPVLSRFVQKVLDETGAKKVDIVAHSMGGANTLYYIKNLDGGNKVANVVTLGGANRLTTGKALPGTDPNQKILYTSIYSSADMIVMNYLSRLDGARNVQIHGVGHIGLLYSSQVNSLIKEGLNGGGQNTN"
+    LipA_mutation_table = pd.read_csv(io.StringIO("""
+    Name,Mutations,TM (°C)
+    WT,,56.0
+    TM,L114P A132D N166Y,61.2
+    2D9,F17S N89Y L114P A132D I157M N166Y,67.4
+    4D3,A15S F17S A20E N89Y G111D L114P A132D I157M N166Y,71.2
+    6B,A15S F17S A20E N89Y G111D L114P A132D M134E M137P I157M S163P N166Y,78.2
+
+    """))
+
+    def parse_mutation(mutation_str):
+        """
+        Parse a mutation string to get the original amino acid, position, and new amino acid.
+
+        Parameters:
+            mutation_str (str): The mutation string (e.g., "A132D")
+
+        Returns:
+            tuple: original amino acid (str), position (int), new amino acid (str)
+        """
+        original_aa = mutation_str[0]
+        new_aa = mutation_str[-1]
+        position = int(mutation_str[1:-1]) - 1  # Convert to Python 0-based index
+
+        return original_aa, position, new_aa
+    
+    def check_mutation_table(df, wt):
+        df = df.copy()
+        df['Mutations'] = df['Mutations'].fillna('')
+        df['Mutations'] = df['Mutations'].apply(lambda s: s.split())
+
+        all_mutations = np.unique(np.hstack(df['Mutations'].values))
+        print(all_mutations)
+        for m in all_mutations:
+            a, pos, b = parse_mutation(m)
+            assert wt[pos] == a, m
+        return df
+    LipA_mutation_table = check_mutation_table(LipA_mutation_table, LipA)
+    def convert_seq(mutations):
+        seq = list(copy.copy(LipA))
+        for m in mutations:
+            _, pos, new = parse_mutation(m)
+            seq[pos] = new
+        return ''.join(seq)
+    LipA_mutation_table['seq'] = LipA_mutation_table['Mutations'].apply(convert_seq)
+    LipA_temps = LipA_mutation_table['TM (°C)'].values
+    LipA_seqs = LipA_mutation_table['seq'].values
+    LipA_wt = LipA_seqs[0]
+    LipA_variants = LipA_seqs[1:]
+    lipa_wt_score, lipa_v_scores = model.score_variants(LipA_wt, LipA_variants, indels=False)
+    lipa_scores = [lipa_wt_score] + lipa_v_scores
+    # get spearmans
+    lipa_spear_r, lipa_spear_p = spearmanr(LipA_temps, lipa_scores)
+
+    # make plot
+    fig, ax = plt.subplots(2,1, figsize=(4,8), sharex=True)
+    sns.regplot(x=LovD_temperatures, y=lovd_scores, ax=ax[0])
+    sns.regplot(x=LipA_temps, y=lipa_scores, ax=ax[1])
+    ax[0].hlines(y=0.0, xmin=ax[0].get_xlim()[0], xmax=ax[0].get_xlim()[1], color='k')
+    ax[1].hlines(y=0.0, xmin=ax[0].get_xlim()[0], xmax=ax[0].get_xlim()[1], color='k')
+    ax[1].set_xlabel('Experimental TM [C]')
+    ax[1].set_ylabel('Model logP score')
+    ax[0].set_ylabel('Model logP score')
+    ax[0].set_title('LovD Variants')
+    ax[1].set_title('LipA Variants')
+    plt.savefig('./data/plots/exp_tm_scores.png', dpi=400, bbox_inches='tight')
+
     # save the data too
     with open('./data/nomelt-model-full/zero_shot_estimated.json', 'w') as f:
         json.dump(
-            {'lovd': {'temps': LovD_temperatures, 'scores': lovd_scores}},
+            {'lovd': {'temps': list(LovD_temperatures), 'scores': list(lovd_scores), 'spearman': float(lovd_spear_r), 'p': float(lovd_spear_p)},
+             'lipa': {'temps': list(LipA_temps), 'scores': list(lipa_scores), 'spearman': float(lipa_spear_r), 'p': float(lipa_spear_p)}},
             f
         )

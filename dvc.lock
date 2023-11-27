@@ -474,13 +474,13 @@ stages:
     deps:
     - path: ./scripts/proof_of_principle/consensus_estimated.py
       hash: md5
-      md5: 45f6a66beffa19581018dd2e7e1570b9
-      size: 1259
+      md5: f3bf924d26d88dfa36482bba222f2ddb
+      size: 1442
     outs:
     - path: ./data/proof_of_principle/consensus_estimated.json
       hash: md5
-      md5: 2ae9a64b69a1bc80118326ad1d4992c9
-      size: 60
+      md5: e5eb5d689388c77b325d493b70904a14
+      size: 167
   zero_shot_estimation:
     cmd: python ./scripts/zero_shot_experiment.py
     deps:
@@ -491,14 +491,14 @@ stages:
       nfiles: 41
     - path: ./scripts/zero_shot_experiment.py
       hash: md5
-      md5: 9a469b9eee9be85a3a193dcdffbf79ea
-      size: 5764
+      md5: e3130e9dbf79741de94533e331a14eac
+      size: 9027
     outs:
     - path: ./data/nomelt-model-full/zero_shot_estimated.json
       hash: md5
-      md5: 094de66e89bb225e18881a564a857670
-      size: 276
-    - path: ./data/plots/lovd_scores.png
+      md5: b4d3daa9b504943531e0e32ba0017af6
+      size: 527
+    - path: ./data/plots/exp_tm_scores.png
       hash: md5
-      md5: 1520a52b7afd6ab1da04210208a0da06
-      size: 117132
+      md5: b87c631154fd3cf591985919cfb3dc72
+      size: 255366

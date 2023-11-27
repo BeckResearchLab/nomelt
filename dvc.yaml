@@ -275,7 +275,7 @@ stages:
       - ./data/nomelt-model-full/zero_shot_estimated.json:
           cache: false
     plots:
-      - ./data/plots/lovd_scores.png:
+      - ./data/plots/exp_tm_scores.png:
           cache: false
 # proof of principle scripts
 #################################
@@ -339,7 +339,7 @@ stages:
     outs:
       - ./data/proof_of_principle/enh1_vs_consensus_dna_binding.json:
           cache: false
-  enh1_in_training_set:
+  tests_in_training_set:
     wdir: ./
     cmd: python scripts/proof_of_principle/enh1_check_training_set.py
     deps:

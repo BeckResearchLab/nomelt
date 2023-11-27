@@ -17,7 +17,8 @@ estimator_args=mAFminDGArgs(
     wdir='./tmp/af_dg/',
     use_relaxed=False,
     num_replicates=25,
-    fix_msas=True
+    fix_msas=True,
+    residue_length_norm=True
 )
 if __name__ == '__main__':
     tracker = codecarbon.OfflineEmissionsTracker(
@@ -29,9 +30,11 @@ if __name__ == '__main__':
     tracker.start()
     estimator = mAFminDGEstimator(args=estimator_args)
     sequences = [
-        'RRKRTTFTKEQLEELEELFEKNRYPSAEEREELAKKLGLTERQVKVWFQNRRAKEKK'
+        'RRKRTTFTKEQLEELEELFEKNRYPSAEEREELAKKLGLTERQVKVWFQNRRAKEKK',
+        'KQWSENVEEKLKEFVKRHQRITQEELHQYAQRLGLNEEAIRQFFEEFEQRK',
+        'DKRPRKQWSENVEEKLKEFVKRHQRITQEELHQYAQRLGLNEEAIRQFFEEFEQRKKK'
     ]
-    ids = ["consensus-hd"]
+    ids = ["consensus-hd", "uvf", "uvf-tails"]
     outs = estimator.run(sequences=sequences, ids=ids)
     tracker.stop()
     with open('./data/proof_of_principle/consensus_estimated.json', 'w') as f:
