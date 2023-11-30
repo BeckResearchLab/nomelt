@@ -514,3 +514,14 @@ stages:
       hash: md5
       md5: b784a66ae8ef924c8a4a2cfdbf270d45
       size: 184
+  mAF_length_diff_test:
+    cmd: python scripts/proof_of_principle/mAF_length_diff_test.py
+    outs:
+    - path: ./data/plots/mAF_length_diff_test.png
+      hash: md5
+      md5: 4058e87308ef1fe236e5398efb72df81
+      size: 131966
+    - path: ./data/proof_of_principle/mAF_length_diff_test.json
+      hash: md5
+      md5: 077661c94d17505a049e383ed1bc191e
+      size: 371

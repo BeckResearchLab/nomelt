@@ -290,6 +290,17 @@ stages:
     outs:
       - ./data/proof_of_principle/natural_diversity_entropy.json:
           cache: false
+  # call mAFdg on homologs with expirimental data and see if lenght difference normalization works
+  mAF_length_diff_test:
+    wdir: ./
+    cmd: python scripts/proof_of_principle/mAF_length_diff_test.py
+    metrics:
+      - ./data/proof_of_principle/mAF_length_diff_test.json:
+          cache: false
+    plots:
+      - ./data/plots/mAF_length_diff_test.png:
+          cache: false
+
 # call the af2dg thermostability estimator the wild type enh and the consensus sequence from literature
   consensus_estimated:
     wdir: ./
