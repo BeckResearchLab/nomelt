@@ -1,9 +1,13 @@
 """
 TODO
 
+
 Things to do:
 - [ ] fix slurm job id venv variable for codecarbon
 - [x] utilize cuda for model scoring (already in function)
+
+References:
+- Nutschel, C., et al. (2020). https://pubs.acs.org/doi/10.1021/acs.jcim.9b00954
 """
 # system dependencies
 import io
@@ -11,12 +15,14 @@ import os
 import sys
 import re
 import logging
+import itertools
 from yaml import safe_load
 
 # library dependencies
 import duckdb as ddb
 import numpy as np
 import pandas as pd
+from scipy import stats
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr, spearmanr
 import seaborn as sns
@@ -54,20 +60,17 @@ ANALYSIS_DIR = "./data/gym/analysis/"
 ## functions ###
 ################
 
-def generate_mutated_sequences(wt_sequence: str, mutation_table_path: str) -> list:
+def generate_mutated_sequences(wt_sequence: str, mutation_df: pd.DataFrame) -> list:
     """
-    Generate a list of mutated sequences from a mutation table, each with a single mutation applied to the wild-type.
+    Generate a list of mutated sequences from a mutation table DataFrame, each with a single mutation applied to the wild-type.
 
     Parameters:
     - wt_sequence: The wild-type protein sequence.
-    - mutation_table_path: Path to the CSV containing the mutation table.
+    - mutation_df: DataFrame containing the mutation table.
 
     Returns:
     - List of mutated protein sequences.
     """
-    # Load the CSV
-    mutation_df = pd.read_csv(mutation_table_path)
-
     # Extract mutations
     mutations = mutation_df["mutant"]
 
@@ -97,6 +100,49 @@ def generate_mutated_sequences(wt_sequence: str, mutation_table_path: str) -> li
         all_mutated_sequences.append(''.join(mutated_sequence))
 
     return all_mutated_sequences
+
+def pairwise_t_test(df, alpha=0.05):
+    """
+    Perform pairwise t-tests on a dataframe of measurements.
+
+    Parameters:
+    - df: Dataframe of measurements.
+    - alpha: Significance level.
+
+    Returns:
+    - List of tuples of significant pairs and their differences.
+    """
+    # Extract measurements
+    measurements = df[['Mapped_DMS', 'STDEV']]
+    
+    # Create combinations of all pairs
+    pairs = list(itertools.combinations(measurements.index, 2))
+
+    # Store significant pairs
+    significant_pairs = []
+
+    for i, j in pairs:
+        mean_i, std_i = df.loc[i, ['Mapped_DMS', 'STDEV']]
+        mean_j, std_j = df.loc[j, ['Mapped_DMS', 'STDEV']]
+        # Calculate t-statistic and p-value
+        t_stat, p_val = stats.ttest_ind_from_stats(mean1=mean_i, std1=std_i, nobs1=3,
+                                                   mean2=mean_j, std2=std_j, nobs2=3)
+
+        # Check if the difference is significant
+        if p_val < alpha:
+            significant_pairs.append((i, j, mean_i - mean_j))
+
+    return significant_pairs
+
+# Adjusting the 'Variants of BsLipA' to match the 'mutant' format by adding 31 to the numeric part
+
+# Function to adjust the numeric part of the variant names
+def adjust_variant(variant, offset=31):
+    parts = re.search(r'([A-Za-z]+)(\d+)([A-Za-z]+)', variant)
+    if parts:
+        return f"{parts.group(1)}{int(parts.group(2)) + offset}{parts.group(3)}"
+    else:
+        return variant
 
 
 if __name__ == "__main__":
@@ -130,9 +176,30 @@ if __name__ == "__main__":
     logger.info("Designating WT sequence...")
     wt = "MKFVKRRIIALVTILMLSVTSLFALQPSAKAAEHNPVVMVHGIGGASFNFAGIKSYLVSQGWSRDKLYAVDFWDKTGTNYNNGPVLSRFVQKVLDETGAKKVDIVAHSMGGANTLYYIKNLDGGNKVANVVTLGGANRLTTGKALPGTDPNQKILYTSIYSSADMIVMNYLSRLDGARNVQIHGVGHIGLLYSSQVNSLIKEGLNGGGQNTN"
 
+    logger.info("Reading data...")
+    data_dms = pd.read_csv("./data/gym/ESTA_BACSU_Nutschel_2020.csv")
+    data_stds = pd.read_excel("./data/gym/ci9b00954_si_002.xlsx")
+
+    logger.info('Mapping DMS scores with STDEVs...')
+    # Mapping 'T50' to 'STDEV' in Excel
+    t50_to_stdev_mapping = data_stds.set_index('T50')['STDEV'].to_dict()
+
+    # Apply this function to 'Variants of BsLipA'
+    data_stds['mutant'] = data_stds['Variants of BsLipA'].apply(lambda x: adjust_variant(x))
+
+    # Now map 'Adjusted_Variant' to 'mutant' and then map 'STDEV'
+    data_stds['Mapped_DMS'] = data_stds['mutant'].map(data_dms.set_index('mutant')['DMS_score'].to_dict())
+    # data_stds['Mapped_STDEV'] = data_stds['T50'].map(t50_to_stdev_mapping)
+
+    # Display the first few rows of the Excel dataset with the newly mapped columns
+    data_stds[['Variants of BsLipA', 'mutant', 'Mapped_DMS', 'STDEV']].head()
+
+    logger.debug('DMS scores mapped with STDEVs!')
+    logger.debug(f"Sample data: {data_stds.head()}")
+
     # generate mutated sequences
     logger.info("Generating mutated sequences") 
-    mutated_sequences_list = generate_mutated_sequences(wt, "./data/gym/ESTA_BACSU_Nutschel_2020.csv")
+    mutated_sequences_list = generate_mutated_sequences(wt, data_stds)
     logger.info(f"Generated {len(mutated_sequences_list)} mutated sequences")
     logger.debug(f"Sample mutated sequences: {mutated_sequences_list[:3]}")
 
@@ -159,6 +226,15 @@ if __name__ == "__main__":
     logger.info("Scoring mutated sequences")
     wt_score, variant_scores = model.score_variants(wt, all_mutated_sequences, batch_size=5, indels=False)
     logger.info("model scores computed!")
+
+    # analyzing scores
+    logger.info("Analyzing scores...")
+
+
+    logger.info('Calculating mean and std of DMS scores...')
+    # Calculate mean and std of DMS scores
+    sig_pairs = pairwise_t_test(data_stds)
+    logger.debug(f"Significant pairs: {sig_pairs}")
 
     # stop codecarbon
     tracker.stop()
