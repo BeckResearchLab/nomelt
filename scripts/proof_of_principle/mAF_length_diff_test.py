@@ -66,6 +66,10 @@ if __name__ == '__main__':
     rho, p = spearmanr(temps, scores)
 
     metrics = {'score': outs, 'spearman': rho, 'p': p}
+    # the 62 degree variant is way underestimated by the model, drop it as a outlier and then compute spear
+    rho, p = spearmanr(temps[:-1], scores[:-1])
+    metrics['spearman_no_outlier'] = rho
+    metrics['p_no_outlier'] = p
 
     tracker.stop()
     with open('./data/proof_of_principle/mAF_length_diff_test.json', 'w') as f:

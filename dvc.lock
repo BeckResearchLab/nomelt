@@ -519,9 +519,9 @@ stages:
     outs:
     - path: ./data/plots/mAF_length_diff_test.png
       hash: md5
-      md5: 4058e87308ef1fe236e5398efb72df81
-      size: 131966
+      md5: 0ce6f028e593091dde65a2042f3e1c9c
+      size: 131817
     - path: ./data/proof_of_principle/mAF_length_diff_test.json
       hash: md5
-      md5: 077661c94d17505a049e383ed1bc191e
-      size: 371
+      md5: 1c462b05bd396844d19502c023f1f817
+      size: 455
