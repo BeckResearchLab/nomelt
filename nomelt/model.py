@@ -11,6 +11,7 @@ from transformers import (
 import datasets
 from torch.utils.data import DataLoader
 import numpy as np
+from tqdm import tqdm
 
 from typing import Iterable
 
@@ -186,8 +187,8 @@ class NOMELTModel:
 
         # Loop through variants and calculate probabilities
         variant_scores = []
-        for i, variant in enumerate(variants):
-            variant_logits = logit_data['logits'][i + 1]
+        for i, variant in tqdm(enumerate(variants), total=len(variants), desc="Processing variants"):
+            variant_logits = logit_data[i + 1]['logits'] # edited
             variant_probs_all = torch.softmax(torch.tensor(variant_logits), axis=1)
 
             # Use all positions if indels are present, otherwise get mutation positions

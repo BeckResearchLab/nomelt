@@ -25,6 +25,7 @@ dependencies:
   - clustalw
   - mdanalysis
   - mmseqs2
+  - openpyxl
   # - blast
   - pip
   - pip:
