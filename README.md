@@ -8,8 +8,6 @@ conda installs
 rosetta install seperate
 af install seperate
 FATCAT
-CD-HIT
-
 
 ## Config
 
@@ -18,6 +16,11 @@ Accelerate config
 ## ENV variables
 `TMP`
 `AF_APPTAINER_SCRIPT`
+`LOG_LEVEL`
+
+## TODO
+
+- HF caching: caching and DVC clash a little bit. Be default, when you do operations on a HF dataset, it creates cache files in the dataset folder, which makes DVC think the dataset has changed. If you want to use those cache operations, you have to commit the data/dataset object to DVC with changes. Instead, it would be better if cacheing dataset operations were abstracted out into their own script, and the cache file manually pathed to a dvc tracked output. Thus if paramters in the pipeline would change the operation, that one stage would be run, but downstream stages that use the same operations (eg. tokenization) could reuse that dvc tracked cache.
 
 ## Models
 `nomelt` models are all designed to produce amino acid sequences of proteins stable at high temperature, conditioned on an input
