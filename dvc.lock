@@ -519,9 +519,30 @@ stages:
     outs:
     - path: ./data/plots/mAF_length_diff_test.png
       hash: md5
-      md5: 0ce6f028e593091dde65a2042f3e1c9c
-      size: 131817
+      md5: 951048668a4bae9dc59f9cef1151fa45
+      size: 172536
     - path: ./data/proof_of_principle/mAF_length_diff_test.json
       hash: md5
       md5: 1c462b05bd396844d19502c023f1f817
       size: 455
+  protein_gym_benchmark:
+    cmd: python ./scripts/protein_gym_benchmark.py
+    deps:
+    - path: ./data/nomelt-model-full/model/
+      hash: md5
+      md5: 475cac1353e35b4ad63dc8b253151906.dir
+      size: 40406837410
+      nfiles: 41
+    - path: ./scripts/protein_gym_benchmark.py
+      hash: md5
+      md5: 74c4e39a2bc90936757e324ade333984
+      size: 8505
+    outs:
+    - path: ./data/nomelt-model-full/lipa_gym_zero_shot.json
+      hash: md5
+      md5: 59cca8507f5fca680f7622795f79e2fc
+      size: 192
+    - path: ./data/plots/lipa_gym.png
+      hash: md5
+      md5: 38d47965d452f5babdcc9161f25ae9a7
+      size: 122422

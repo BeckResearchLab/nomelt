@@ -277,6 +277,19 @@ stages:
     plots:
       - ./data/plots/exp_tm_scores.png:
           cache: false
+
+  protein_gym_benchmark:
+    wdir: ./
+    cmd: python ./scripts/protein_gym_benchmark.py
+    deps:
+      - ./scripts/protein_gym_benchmark.py
+      - ./data/nomelt-model-full/model/
+    outs:
+      - ./data/nomelt-model-full/lipa_gym_zero_shot.json:
+          cache: false
+    plots:
+      - ./data/plots/lipa_gym.png:
+          cache: false
 # proof of principle scripts
 #################################
 

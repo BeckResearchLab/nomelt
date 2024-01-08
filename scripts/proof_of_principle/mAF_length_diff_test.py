@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     # make a plot
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.regplot(x=temps, y=scores, ax=ax)
+    sns.regplot(x=temps[:-1], y=scores[:-1], ax=ax)
     ax.set_xlabel('Experimental melting temperature (C)')
     ax.set_ylabel('Score')
     plt.savefig('./data/plots/mAF_length_diff_test.png', dpi=300, bbox_inches='tight')
