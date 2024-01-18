@@ -75,11 +75,13 @@ def main(args):
 
         with open(sequence, 'r') as f:
             sequences = f.readlines()
-        scores = model.score_variants(sequences, indels=config['zero_shot_ranking']['indels']) # this is just a list of scores
+        wild_type = sequences[0]
+        sequences = sequences[1:]
+        wt_score, variant_scores = model.score_variants(wt=wild_type, variants=sequences, indels=config['zero_shot_ranking']['indels']) # this is just a list of scores
         scores_file = os.path.join(output_dir, "zero_shot_scores.csv")
         logger.info(f"Zero shot scoring complete. Writing to {scores_file}")
         with open(scores_file, 'w') as f:
-            f.write("\n".join([str(score) for score in scores]))
+            f.write("\n".join([str(wt_score)]+[str(score) for score in scores]))
         return
     
     if config['beam_search']['enabled']:
