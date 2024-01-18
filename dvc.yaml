@@ -1,25 +1,24 @@
 stages:
-# get data ready for training eg. filtering out all but best pairs, balancing, etc.
+  # get data ready for training eg. filtering out all but best pairs, balancing, etc.
   prepare_data:
     wdir: ./
     cmd: python scripts/prepare_data.py
     deps:
       - ./scripts/prepare_data.py
-      - ./nomelt/deduplication.py
       - ./data/database.ddb
     params:
-      - data.min_temp_diff
-      - data.min_thermo_temp
-      - data.max_meso_temp
-      - data.min_align_cov
-      - data.mmseq_params
-      - data.test_size
-      - data.dev_sample_data
-      - data.additional_filters
+      - data.min_temp_diff # difference in temperature between meso and thermo homologs
+      - data.min_thermo_temp # minimum temperature of thermo homologs
+      - data.max_meso_temp # maximum temperature of meso homologs
+      - data.min_align_cov # minimum alignment coverage of homologs to bo considered a protein pair
+      - data.mmseq_params # parameters for mmseqs2 clustering
+      - data.test_size # size of test set in fraction
+      - data.dev_sample_data # sample data to speed up development, ignore for production
+      - data.additional_filters # string of sql expression used to filter protein pair data from database
     outs:
-      - ./data/dataset/
+      - ./data/dataset/ # a huggingface dataset that contains protein pairs
     metrics:
-      - ./data/data_metrics.yaml:
+      - ./data/data_metrics.yaml: # contains number of clusters in data splits and number of data
           cache: false
   blast_test_train:
     wdir: ./
@@ -28,61 +27,61 @@ stages:
       - ./scripts/blast_test_train.py
       - ./data/dataset/
     metrics:
-      - ./data/test_train_blast_metrics.json:
+      - ./data/test_train_blast_metrics.json: # scores for seq id and E value of test blasted against train
           cache: false
     plots:
-      - ./data/plots/test_train_blast_hist.png:
+      - ./data/plots/test_train_blast_hist.png: # distributions of seq id and E value of test blasted against train
           cache: false
 # train model
   train:
     wdir: ./
-    cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train.py 
+    cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train.py # runs deepspeed
     deps:
       - ./scripts/train.py
       - ./data/dataset/
-      - ./.config/accelerate/default_config.yaml
+      - ./.config/accelerate/default_config.yaml # this is a deepspeed config file
     params:
-      - model.pretrained_model
-      - model.task
-      - model.generation_max_length
-      - model.model_hyperparams
-      - training.reweight
-      - training.freeze_early_layers
-      - training.dev_sample_data
-      - training.per_device_batch_size
-      - training.gradient_accumulation
-      - training.auto_find_batch_size
-      - training.evals_per_save
-      - training.evals_per_epoch
-      - training.epochs
-      - training.gradient_checkpointing
-      - training.learning_rate
-      - training.lr_scheduler_type
-      - training.label_smoothing_factor
-      - training.warmup_ratio
-      - training.optim
-      - training.optim_args
-      - training.eval_single_example_per_cluster
-      - training.fp16
-      - training.bf16
-      - training.early_stopping
-      - training.early_stopping_patience
-      - training.early_stopping_threshold
+      - model.pretrained_model # pretrained model string from huggingface or disk
+      - model.task # either translation or reconstruction
+      - model.generation_max_length # maximum length of generated sequence
+      - model.model_hyperparams # hyperparameters for model, passed to HF params class
+      - training.reweight # whether to weight the loss function by the number of sequences in each cluster
+      - training.freeze_early_layers # fraction of layers to freeze
+      - training.dev_sample_data # sample data to speed up development, ignore for production
+      - training.per_device_batch_size # batch size per device
+      - training.gradient_accumulation # number of batches to accumulate gradients over
+      - training.auto_find_batch_size # whether to find the largest batch size that fits on the gpu
+      - training.evals_per_save # number of evals between saves
+      - training.evals_per_epoch # number of evals between epoch saves
+      - training.epochs # max number of epochs to train for
+      - training.gradient_checkpointing # whether to use gradient checkpointing
+      - training.learning_rate # learning rate
+      - training.lr_scheduler_type # type of learning rate scheduler
+      - training.label_smoothing_factor # label smoothing factor
+      - training.warmup_ratio # fraction of total steps to warmup learning rate
+      - training.optim # optimizer
+      - training.optim_args # optimizer arguments passed to HF optimizer
+      - training.eval_single_example_per_cluster # whether to evaluate a single example per cluster in the eval set
+      - training.fp16 # whether to use fp16
+      - training.bf16 # whether to use bf16
+      - training.early_stopping # whether to use early stopping
+      - training.early_stopping_patience # number of evals without improvement before stopping
+      - training.early_stopping_threshold # threshold for improvement to be considered significant
     outs:
-      - ./data/nomelt-model/model/:
+      - ./data/nomelt-model/model/: # this is a HF model save directory
           persist: true
-      - ./data/nomelt-model/live/report.md:
+      - ./data/nomelt-model/live/report.md: # this is a markdown report of the training run
           cache: false
     metrics:
-      - ./data/nomelt-model/live/metrics.json:
+      - ./data/nomelt-model/live/metrics.json: # this is a json file of metrics from the training run as a function of steps
           cache: false
-      - ./data/nomelt-model/live/plots/:
+      - ./data/nomelt-model/live/plots/: # this is a directory of plots from the training run that show up in the report
           cache: false
           persist: true
     plots:
       - ./data/nomelt-model/live/static/:
           cache: false
-  train_all:
+  train_all: # this is the same as above except it trains on the whole dataset and does not evaluate on anything. Final model
     wdir: ./
     cmd: accelerate launch --config_file ./.config/accelerate/default_config.yaml scripts/train_all.py 
     deps:
@@ -131,7 +130,7 @@ stages:
       - ./data/nomelt-model-full/live/static/:
           cache: false
 # run the model on test set and save generated sequences
-  make_predictions:
+  make_predictions: 
     wdir: ./
     cmd:  accelerate launch --config_file ./.config/accelerate/data_parallel_config.yaml scripts/make_predictions.py 
     deps:
@@ -139,10 +138,10 @@ stages:
       - ./data/nomelt-model/model/
       - ./data/dataset/
     params:
-      - model.generation_max_length
-      - model.generation_num_beams
+      - model.generation_max_length # maximum length of generated sequence
+      - model.generation_num_beams # number of beams to use in beam search
     outs:
-      - ./data/nomelt-model/predictions.tsv
+      - ./data/nomelt-model/predictions.tsv # a tsv file of predictions includes meso, thermo and predicted sequences
 # compute metrics on the test set from the predictions
   score_predictions:
     wdir: ./
@@ -151,9 +150,8 @@ stages:
       - ./scripts/score_predictions.py
       - ./data/nomelt-model/predictions.tsv
     outs:
-      - ./data/nomelt-model/test_scores.json:
+      - ./data/nomelt-model/test_scores.json: # a json file of metrics computed on the test set, these are only HF metrics like google bleu
           cache: false
-
 # call the model to generate thermostable variant of enh1
   translate_enh1:
     wdir: ./
@@ -165,7 +163,7 @@ stages:
       - model.generation_max_length
       - model.generation_num_beams
     outs:
-      - ./data/enh/translate_enh1.json:
+      - ./data/enh/translate_enh1.json: # a json file of the generated sequence for enh1
           cache: false
 # call thermostability estimator on the generated sequence
   estimate_trans_energy_enh1:
@@ -174,15 +172,15 @@ stages:
     deps: 
       - scripts/estimate_trans_energy_enh1.py
       - ./data/enh/translate_enh1.json
-      - ./.config/af_singularity_config.yaml
+      - ./.config/af_singularity_config.yaml # this is a config file for the af2dg estimator
     params:
-      - optimize.estimator
-      - optimize.estimator_args
+      - optimize.estimator # name of estimator for estimating thermal stability, class in NOMELT
+      - optimize.estimator_args # arguments for estimator
     outs:
-      - ./data/enh/translated_energy_enh1.json:
+      - ./data/enh/translated_energy_enh1.json: # a json file of the estimated thermal stability of the generated sequence
           cache: false
-      - ./data/enh/initial_estimate/
-# use thermo estimator to find a subset of mutations that are likely to increase thermostability
+      - ./data/enh/initial_estimate/ # contains data dump from running estimator
+  # use thermo estimator as oracle and optuna to find a subset of mutations that are likely to increase thermostability
   optimize_enh1:
     wdir: ./
     cmd: python scripts/optimize_enh1.py
@@ -190,41 +188,29 @@ stages:
       - ./scripts/optimize_enh1.py
       - ./data/enh/translate_enh1.json
     params:
-      - optimize.estimator
-      - optimize.estimator_args
-      - optimize.n_trials
-      - optimize.direction
-      - optimize.sampler
-      - optimize.cut_tails
-      - optimize.gap_compressed_mutations
-      - optimize.matrix
-      - optimize.match_score
-      - optimize.mismatch_score
-      - optimize.gapopen
-      - optimize.gapextend
-      - optimize.penalize_end_gaps
-      - optimize.sampler_args
-      - optimize.optuna_overwrite
+      - optimize.estimator # name of estimator for estimating thermal stability, class in NOMELT
+      - optimize.estimator_args # arguments for estimator
+      - optimize.n_trials # number of trials to run
+      - optimize.direction # minimize or maximize
+      - optimize.sampler # optuna sampler
+      - optimize.cut_tails # number of gap spaces to keep on ends of the alignment
+      - optimize.gap_compressed_mutations # whether to consider a string of gaps a single mutation
+      - optimize.matrix # substitution matrix
+      - optimize.match_score # match score
+      - optimize.mismatch_score # mismatch score
+      - optimize.gapopen # gap open penalty
+      - optimize.gapextend # gap extend penalty
+      - optimize.penalize_end_gaps # whether to penalize end gaps
+      - optimize.sampler_args # arguments for sampler
+      - optimize.optuna_overwrite # whether to overwrite optuna study
     outs:
-      - ./data/enh/optimize_enh1/:
+      - ./data/enh/optimize_enh1/: # contains data dump from running optimizer
           persist: true
-      - ./data/enh/optimize_enh1_trials.csv:
+      - ./data/enh/optimize_enh1_trials.csv: # a csv file of the trials from the optimizer
           cache: false
-      - ./data/enh/optimize_enh1_results.json:
+      - ./data/enh/optimize_enh1_results.json: # a json file of the results, best seq, structure file, and estimated thermal stability 
           cache: false
-# estimate the DNA binding of the enh1 variant proposed by the model as well as the optimization process
-  # trans_binding:
-  #   wdir: ./
-  #   cmd: python scripts/dna_binding_alignment.py
-  #   deps:
-  #     - ./scripts/dna_binding_alignment.py
-  #     - ./data/enh/optimize_enh1_results.json
-  #     - ./data/enh/initial_estimate/
-  #     - ./data/enh/optimize_enh1/
-  #   outs:
-  #     - ./data/enh/enh1_vs_consensus_dna_binding.json:
-  #         cache: false
-  #     - ./data/enh/trans_binding/
+  # computes and saves residue wise embeddings for final layers of model on the test set. to help evaluate residue wise scores
   compute_test_embeddings:
     wdir: ./
     cmd: python scripts/compute_test_embeddings.py
@@ -233,18 +219,19 @@ stages:
       - ./data/dataset/
       - ./data/nomelt-model/model/
     metrics:
-      - ./data/nomelt-model/test_loss.json:
+      - ./data/nomelt-model/test_loss.json: # a json file of the loss on the test set
           cache: false
-  # compare generated to thermophilic structures
+  # compare generated to thermophilic structures with blast alignments, also compare to meso sequence
   compare_sequence_alignment:
     wdir: ./
     cmd: python scripts/compare_sequence_alignment.py
     deps:
       - ./scripts/compare_sequence_alignment.py
-      - ./data/nomelt-model/predictions.tsv
+      - ./data/nomelt-model/predictions.tsv 
     outs:
-      - ./data/nomelt-model/test_predictions_aligned_results.json:
+      - ./data/nomelt-model/test_predictions_aligned_results.json: # a json of smith waterman alignments in a triangle for each meso, thermo, generated
           cache: false
+  # compare generated to thermophilic structures with structure alignments
   compare_structure:
     wdir: ./
     cmd: python scripts/compare_structure.py
@@ -252,9 +239,9 @@ stages:
       - ./scripts/compare_structure.py
       - ./data/nomelt-model/predictions.tsv
     outs:
-      - ./data/nomelt-model/structure_metrics.json:
+      - ./data/nomelt-model/structure_metrics.json: # fatcat and dssp comparison
           cache: false
-# call the af2dg thermostability estimator on a sample of data and save the scores
+# call the af2dg thermostability estimator on a sample of data and save the scores. runs meso, thermo, and generated
   data_estimator_distribution:
     wdir: ./
     cmd: python scripts/data_estimator_distribution.py
@@ -262,9 +249,10 @@ stages:
       - ./data/nomelt-model/predictions.tsv
       - ./scripts/data_estimator_distribution.py
     outs:
-     - ./data/thermo_gen_estimated.json:
+     - ./data/thermo_gen_estimated.json: # json of meso, thermo, generated thermal stability scores
          cache: false
-
+  # looks at model outputs and compares to experimental data for melting temperature or another thermal stability target
+  # for two proteins with multiple mutations accumulated
   zero_shot_estimation:
     wdir: ./
     cmd: python ./scripts/zero_shot_experiment.py
@@ -272,12 +260,12 @@ stages:
       - ./scripts/zero_shot_experiment.py
       - ./data/nomelt-model-full/model/
     outs:
-      - ./data/nomelt-model-full/zero_shot_estimated.json:
+      - ./data/nomelt-model-full/zero_shot_estimated.json: # exp vs model scores
           cache: false
     plots:
-      - ./data/plots/exp_tm_scores.png:
+      - ./data/plots/exp_tm_scores.png: # regression plot of exp vs model scores
           cache: false
-
+  # run zero shot like above on protein gym T50 benchmark set
   protein_gym_benchmark:
     wdir: ./
     cmd: python ./scripts/protein_gym_benchmark.py
@@ -285,10 +273,10 @@ stages:
       - ./scripts/protein_gym_benchmark.py
       - ./data/nomelt-model-full/model/
     outs:
-      - ./data/nomelt-model-full/lipa_gym_zero_shot.json:
+      - ./data/nomelt-model-full/lipa_gym_zero_shot.json: # correlation coeffs and fraction of stat sig pairs in DMS library that were qualitatively predicted
           cache: false
     plots:
-      - ./data/plots/lipa_gym.png:
+      - ./data/plots/lipa_gym.png: # density plot of exp vs model scores
           cache: false
 # proof of principle scripts
 #################################
@@ -301,7 +289,7 @@ stages:
       - ./data/dataset
       - ./scripts/proof_of_principle/natural_diversity_entropy.py
     outs:
-      - ./data/proof_of_principle/natural_diversity_entropy.json:
+      - ./data/proof_of_principle/natural_diversity_entropy.json: # contains cross entropy from searching natural thermophilic diversity
           cache: false
   # call mAFdg on homologs with expirimental data and see if lenght difference normalization works
   mAF_length_diff_test:
@@ -311,7 +299,7 @@ stages:
       - ./data/proof_of_principle/mAF_length_diff_test.json:
           cache: false
     plots:
-      - ./data/plots/mAF_length_diff_test.png:
+      - ./data/plots/mAF_length_diff_test.png: # mAF scores normalized vs expermientla scores for a number of indel variants
           cache: false
 
 # call the af2dg thermostability estimator the wild type enh and the consensus sequence from literature
@@ -321,7 +309,7 @@ stages:
     deps:
       - ./scripts/proof_of_principle/consensus_estimated.py
     outs:
-      - ./data/proof_of_principle/consensus_estimated.json:
+      - ./data/proof_of_principle/consensus_estimated.json: # mAF score for consensus
           cache: false
 # manually add a few mutations to the wild type enh and call the af2dg thermostability estimator to see how it effects the score
   enh1_vary_mutations:
@@ -354,21 +342,13 @@ stages:
           cache: false
       - ./data/proof_of_principle/optimize_enh1_rand_trials.csv:
           cache: false
-# get the docking scores from haddock of the wild type enh vs consensus sequence
-  enh1_vs_consensus_docking_score:
-    wdir: ./
-    cmd: python scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
-    deps:
-      - ./scripts/proof_of_principle/enh1_vs_consensus_docking_score.py
-    outs:
-      - ./data/proof_of_principle/enh1_vs_consensus_dna_binding.json:
-          cache: false
+  # searches for test exdamples eg. ENH, LovD, and Lipase A in the training set of the model
   tests_in_training_set:
     wdir: ./
     cmd: python scripts/proof_of_principle/check_training_set_for_case_studies.py
     deps:
       - ./scripts/proof_of_principle/check_training_set_for_case_studies.py
     outs:
-      -  ./data/enh/training_data_homologs.json:
+      -  ./data/enh/training_data_homologs.json: # e value of any hits found in training set
           cache: false
 
