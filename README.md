@@ -57,6 +57,42 @@ There are a number of sporadic config files floating around for different parts 
 2. Hypothetically, the entire pipeline can then be run with one command, assuming enough available resources by `dvc exp run` however it is recommended that individual pipeline steps be run in order with only the necessary resources. For example, data processing steps do not need access to GPUs. Runa single step by `dvc exp run -s STAGE_NAME --downstream`. You can see the names of stages by `dvc status`
 
 ## Usage, using the trained model
+Aquire the trained model parameters from Zenodo: XXX
+
+After installation, `./app/run_nomelt.py` can be used to interact with the trained model. What
+will be conducted is determined by the config file at `./app/config.yaml`. Each section after the first in this `yaml` file can be enabled and configured.
+
+The first section, `model`, defines hyperparameters for loading the model. You probably shouldn't change these.
+
+Calling the script has the following signature:
+```
+python run_nomelt.py [-h] input output_dir model_path config_file
+```
+- `input` is either a sequence or a library of sequences. If a sequence, it should be a string. If a library, it should be a text file with one sequence per line.
+- `output_dir` is the path to the output directory. If the directory does not exist, it will be created. Results are dumped here
+- `model_path` is the path to the NOMELT model directory. This should be the directory containing the `pytorch_model.bin` file.
+- `config_file` is the path to the config.yaml file. This is the config file that controls the behavior of the script. See below for details.
+
+### To produce a single translation of an input sequence
+This produces the most likely translation of the input sequence, on average, according to the model. __Enable Step 1__ and configure the number of beams and max length of the sequence. Input the input sequence as a string to the script. It produces an output file "beam_search_sequence.txt" with the translation.
+
+### To produce a large set of variants
+This can be achieved in two ways:
+
+Input the input sequence as a string to the script.
+
+1. __In addition to enabling Step 1, enable Step 3__. This will conduct an alignment between the translation and the input, discretize a number of mutations upon that alignment resulting from the differences, and create a library of permuations over those suggested mutations. It outputs a file "library.txt"
+
+2. __Enable Step 2__. This creates a number of variants stochastically. The temperature, max difference in length between stochastic variants and the input, and the number of variants to create can be configured. One of NOMELT's failure modes is to reproduce the input sequence on BEAM searches. By setting a high temperature in this strategy, the model is more likely to produce variants that are different from the input, though no guarantee that the model makes a good set of suggestions. This outputs a file "stochastic_sequences.txt"
+
+### To evaluate a library of variants zero-shot
+Instead of inputting a sequence, input a library of sequences. The first sequence must be the wild type sequence. The library should be a text file with one sequence per line. __Enable Step 5__. This will evaluate the library of sequences and output a file "zero_shot_scores.txt" where each line is the predicted score associated with the input sequence on the same line.
+
+### To conduct "optimization" over suggested mutations using an in silico estimator
+This can be extremely expensive and requires multiple GPUs. As of Jan 2024, only the mAF-dg method has been used as a scorered and is suggested.
+
+__Enable Step 4__. Configure the estimator to use, the number of trials in exploring the library, the type of sampler for choosing mutations to testm etc. This outputs a file "optimize_results.json" which contains the sequence, score, and predicted structure file of the best sequence found. It also outputs "trials.csv" which is a dataframe of all of the trials executed. 
+
 
 ## TODO
 
