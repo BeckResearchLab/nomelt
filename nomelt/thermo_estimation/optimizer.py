@@ -1,4 +1,4 @@
-from dask.distributed import wait, Client
+from dask.distributed import wait, Client, get_worker
 
 import os
 import time
@@ -274,13 +274,11 @@ class MutationSubsetOptimizer:
         logger.info('\n'+net_string)
 
     def all_permutations(self):
-        """Return all possible variant sequences based on all permutations of mutations"""
-        combs = []
+        """Yield all possible variant sequences based on all permutations of mutations"""
         for i, k in enumerate(self.mutation_set.keys()):
-            combs.extend(list(itertools.combinations(self.mutation_set.keys(), i+1)))
-        combs = [self._get_variant_sequence(c) for c in combs]
-        combs.append(self.variant)
-        return combs
+            for comb in itertools.combinations(self.mutation_set.keys(), i+1):
+                yield self._get_variant_sequence(comb)
+        yield self.variant
 
     def _get_variant_sequence(self, mutation_subset: List[str]) -> str:
         variant = list(self.aligned_wt)  # Create a mutable copy
@@ -348,7 +346,7 @@ class MutationSubsetOptimizer:
             wait(futures)
         logger.info(f"Finished optimization. Best value: {study.best_value}, best params: {study.best_params}")
         return study.best_params, study.best_value, study
-
+    
     @property
     def best_mutations(self):
         if self.study is None:
@@ -362,6 +360,13 @@ class MutationSubsetOptimizer:
             raise ValueError("Optimized sequence not yet determined, call `run`")
         else:
             return self.study.best_trial
+
+    @property
+    def trials_dataframe(self):
+        if self.study is None:
+            raise ValueError("Optimized sequence not yet determined, call `run`")
+        else:
+            return self.study.trials_dataframe()
     
     @staticmethod
     def clean_gaps(sequence: str) -> str:
@@ -415,6 +420,22 @@ class OptunaObjective:
         return result  # Optuna minimizes by default, so return negative result to maximize
 
 def _worker_optimize(objective, n_trials, sampler, study_name, storage):
+    # set up logger on this worker
+    worker = get_worker()
+    worker_id = worker.id
+
+    # Generating a unique log file name
+    log_file = f'./workers/worker_{worker_id}_{int(time.time())}.log'
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+    # Configure logging for this worker
+    # Check if logging is already configured to avoid conflicts
+    if not logging.root.handlers:
+        logging.basicConfig(filename=log_file, level=logging.INFO,
+                            format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+
+    logger = logging.getLogger(f'Worker_{worker_id}')
+
     study = optuna.load_study(
         sampler=sampler,
         pruner=RepeatPruner(),

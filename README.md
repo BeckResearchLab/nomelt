@@ -1,5 +1,7 @@
 # nomelt
-Designing high temperature protein sequences via learned language processing
+Introducing variation onto protein sequences targetting high temperature stability via neural machine translation.
+
+This work is associated with IN REVIEW. The preprint is available at XXX.
 
 ## Installation for using the trained model
 
@@ -28,7 +30,7 @@ optimization:
   enabled: false
   estimator: mAFminDGEstimator
   estimator_args: 
-    af_params: ./.config/af_singularity_config.yaml
+    af_params: ./.config/af_singularity_config.yaml # location of the alphafold config file
     use_relaxed: False
 ...
 ```
@@ -70,7 +72,7 @@ python run_nomelt.py [-h] input output_dir model_path config_file
 ```
 - `input` is either a sequence or a library of sequences. If a sequence, it should be a string. If a library, it should be a text file with one sequence per line.
 - `output_dir` is the path to the output directory. If the directory does not exist, it will be created. Results are dumped here
-- `model_path` is the path to the NOMELT model directory. This should be the directory containing the `pytorch_model.bin` file.
+- `model_path` is the path to the NOMELT model directory. This should be the directory containing the `pytorch_model.bin` file you got from Zenodo.
 - `config_file` is the path to the config.yaml file. This is the config file that controls the behavior of the script. See below for details.
 
 ### To produce a single translation of an input sequence
@@ -81,7 +83,7 @@ This can be achieved in two ways:
 
 Input the input sequence as a string to the script.
 
-1. __In addition to enabling Step 1, enable Step 3__. This will conduct an alignment between the translation and the input, discretize a number of mutations upon that alignment resulting from the differences, and create a library of permuations over those suggested mutations. It outputs a file "library.txt"
+1. __In addition to enabling Step 1, enable Step 3__. This will conduct an alignment between the translation and the input, discretize a number of mutations upon that alignment resulting from the differences, and create a library of permuations over those suggested mutations. It outputs a file "library.txt". Note, this writes all combinations of mutations, which can be VERY large, for example with 20 mutations this is 2^20 sequences. The output file can be many gigabytes. Use the next option if the NOMELT model suggests a large number of mutations.
 
 2. __Enable Step 2__. This creates a number of variants stochastically. The temperature, max difference in length between stochastic variants and the input, and the number of variants to create can be configured. One of NOMELT's failure modes is to reproduce the input sequence on BEAM searches. By setting a high temperature in this strategy, the model is more likely to produce variants that are different from the input, though no guarantee that the model makes a good set of suggestions. This outputs a file "stochastic_sequences.txt"
 
@@ -93,9 +95,5 @@ This can be extremely expensive and requires multiple GPUs. As of Jan 2024, only
 
 __Enable Step 4__. Configure the estimator to use, the number of trials in exploring the library, the type of sampler for choosing mutations to testm etc. This outputs a file "optimize_results.json" which contains the sequence, score, and predicted structure file of the best sequence found. It also outputs "trials.csv" which is a dataframe of all of the trials executed. 
 
-
-## TODO
-
-- HF caching: caching and DVC clash a little bit. Be default, when you do operations on a HF dataset, it creates cache files in the dataset folder, which makes DVC think the dataset has changed. If you want to use those cache operations, you have to commit the data/dataset object to DVC with changes. Instead, it would be better if cacheing dataset operations were abstracted out into their own script, and the cache file manually pathed to a dvc tracked output. Thus if paramters in the pipeline would change the operation, that one stage would be run, but downstream stages that use the same operations (eg. tokenization) could reuse that dvc tracked cache.
 
 

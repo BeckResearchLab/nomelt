@@ -215,8 +215,18 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
                 
                 # Decrease remaining replicates for this sequence_id
                 replicates_to_run[sequence_id] -= 1
+        
+        # do a final check to make sure we have all of the expected files
+        # if not, this function should be rerun
+        complete = True
+        for sequence_id in ids:
+            sequence_dir = os.path.join(self.args.wdir, str(sequence_id))
+            pdb_files = [file for file in os.listdir(sequence_dir) if file.startswith("ensemble_replicate")]
+            if len(pdb_files) < self.args.num_replicates * self.af_params.num_models:
+                logger.warning(f"Found {len(pdb_files)} PDB files for {sequence_id}, expected {self.args.num_replicates * self.af_params.num_models}.")
+                complete = False
 
-        return files_dict
+        return files_dict, complete
 
     def compute_ensemble_energies(self, ids: list[str]) -> Dict[str, float]:
         """Compute energies for all PDB files (based on parameters) in the specified directory.
@@ -253,7 +263,9 @@ class mAFminDGEstimator(ThermoStabilityEstimator):
     def _run(self, sequences: list[str], ids: list[str], gpu_id: int='all') -> Dict[str, float]:
         time0 = time.time()
         self.af_params.gpu_devices = str(gpu_id)
-        files_dict = self.generate_alphafold_ensembles(sequences, ids)
+        complete = False
+        while not complete:
+            files_dict, complete = self.generate_alphafold_ensembles(sequences, ids)
         self.pdb_files_history.update(files_dict)
         energies = self.compute_ensemble_energies(ids)
 

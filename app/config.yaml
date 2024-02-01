@@ -1,10 +1,14 @@
+model:
+  hyperparams:
+    dropout_rate: 0.1
+    relative_attention_max_distance: 250 
+
 # Step 1: Beam Search Translation
 beam_search:
   enabled: true
   generation_max_length: 250  # Default values
   generation_num_beams: 10
-  model_hyperparams: null
-
+  
 # Step 2: Stochastic Sequence Generation
 stochastic:
   enabled: false  # Default is disabled
@@ -14,11 +18,11 @@ stochastic:
 
 # Step 3: Output Permutations libary
 output_library:
-  enabled: true
+  enabled: false
 
 # Step 4: In Silico Optimization
 optimization:
-  enabled: false
+  enabled: true
   estimator: mAFminDGEstimator
   estimator_args: 
     af_params: ./.config/af_singularity_config.yaml
@@ -27,7 +31,7 @@ optimization:
     fix_msas: true
     residue_length_norm: true
   optimizer_args:
-    n_trials: 100
+    n_trials: 10
     direction: minimize
     sampler: NSGAIISampler
     cut_tails: null
@@ -39,9 +43,10 @@ optimization:
     gapextend: -1
     penalize_end_gaps: false
     sampler_args:
-      population_size: 10
+      population_size: 5
     optuna_overwrite: false
 
+# Step 5
 # OR: zero shot prediction
 zero_shot_ranking:
   enabled: false
