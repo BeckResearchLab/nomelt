@@ -61,7 +61,7 @@ There are a number of sporadic config files floating around for different parts 
 ## Usage, using the trained model
 A wrapper was created around the trained model to make it easy to use, including BEAM search, stochastic sampling e.g. producing many variants, optimization over suggested mutations, and zero-shot prediction. These are chosen by enabling different steps in the config file, see below for the different steps that you can run.
 
-Acquire the trained model parameters from Zenodo: XXX
+Acquire the trained model parameters from Zenodo: https://doi.org/10.5281/zenodo.10607558
 
 After installation above, `./app/run_nomelt.py` can be used to interact with the trained model. What
 will be conducted is determined by the config file at `./app/config.yaml`. Each section after the first in this `yaml` file can be enabled and configured.
