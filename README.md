@@ -1,5 +1,5 @@
 # nomelt
-Introducing variation onto protein sequences targetting high temperature stability via neural machine translation.
+Introducing variation onto protein sequences targeting high temperature stability via neural machine translation.
 
 This work is associated with IN REVIEW. The preprint is available at XXX.
 
@@ -59,9 +59,11 @@ There are a number of sporadic config files floating around for different parts 
 2. Hypothetically, the entire pipeline can then be run with one command, assuming enough available resources by `dvc exp run` however it is recommended that individual pipeline steps be run in order with only the necessary resources. For example, data processing steps do not need access to GPUs. Runa single step by `dvc exp run -s STAGE_NAME --downstream`. You can see the names of stages by `dvc status`
 
 ## Usage, using the trained model
-Aquire the trained model parameters from Zenodo: XXX
+A wrapper was created around the trained model to make it easy to use, including BEAM search, stochastic sampling e.g. producing many variants, optimization over suggested mutations, and zero-shot prediction. These are chosen by enabling different steps in the config file, see below for the different steps that you can run.
 
-After installation, `./app/run_nomelt.py` can be used to interact with the trained model. What
+Acquire the trained model parameters from Zenodo: XXX
+
+After installation above, `./app/run_nomelt.py` can be used to interact with the trained model. What
 will be conducted is determined by the config file at `./app/config.yaml`. Each section after the first in this `yaml` file can be enabled and configured.
 
 The first section, `model`, defines hyperparameters for loading the model. You probably shouldn't change these.
@@ -74,6 +76,8 @@ python run_nomelt.py [-h] input output_dir model_path config_file
 - `output_dir` is the path to the output directory. If the directory does not exist, it will be created. Results are dumped here
 - `model_path` is the path to the NOMELT model directory. This should be the directory containing the `pytorch_model.bin` file you got from Zenodo.
 - `config_file` is the path to the config.yaml file. This is the config file that controls the behavior of the script. See below for details.
+
+The following subsections describe the steps that can be enabled.
 
 ### To produce a single translation of an input sequence
 This produces the most likely translation of the input sequence, on average, according to the model. __Enable Step 1__ and configure the number of beams and max length of the sequence. Input the input sequence as a string to the script. It produces an output file "beam_search_sequence.txt" with the translation.
@@ -96,7 +100,7 @@ This can be extremely expensive and requires multiple GPUs. As of Jan 2024, only
 __Enable Step 4__. Configure the estimator to use, the number of trials in exploring the library, the type of sampler for choosing mutations to testm etc. This outputs a file "optimize_results.json" which contains the sequence, score, and predicted structure file of the best sequence found. It also outputs "trials.csv" which is a dataframe of all of the trials executed. 
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details
 
 ## Acknowledgments
 This work was funded under NSF Engineering Data Science Institute Grant OAC-1934292.
