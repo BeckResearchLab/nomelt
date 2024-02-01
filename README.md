@@ -95,5 +95,9 @@ This can be extremely expensive and requires multiple GPUs. As of Jan 2024, only
 
 __Enable Step 4__. Configure the estimator to use, the number of trials in exploring the library, the type of sampler for choosing mutations to testm etc. This outputs a file "optimize_results.json" which contains the sequence, score, and predicted structure file of the best sequence found. It also outputs "trials.csv" which is a dataframe of all of the trials executed. 
 
+## License
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
+## Acknowledgments
+This work was funded under NSF Engineering Data Science Institute Grant OAC-1934292.
 
