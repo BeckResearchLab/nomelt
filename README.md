@@ -99,6 +99,16 @@ This can be extremely expensive and requires multiple GPUs. As of Jan 2024, only
 
 __Enable Step 4__. Configure the estimator to use, the number of trials in exploring the library, the type of sampler for choosing mutations to testm etc. This outputs a file "optimize_results.json" which contains the sequence, score, and predicted structure file of the best sequence found. It also outputs "trials.csv" which is a dataframe of all of the trials executed. 
 
+## Manuscript plots
+Some of the figures in the manuscript were created during the main pipeline steps, while others were created in notebooks.
+- Figure 1: located at `./analysis/figures/data_redundancy.png` created in notebook `./analysis/dataset_stats.ipynb`
+- Figure 2: located at `./analysis/figures/AA_propensities.png` created in notebook `./analysis/probe_model.ipynb`
+- Figure 3: located at `./analysis/figures/disulfide_logits.png` created in notebook `./analysis/probe_model.ipynb`
+- Figure 4: located at `./analysis/figures/estimated_shift_thermo_gen.png` created in notebook `./analysis/dataset_stats.ipynb`
+- Figure 5: located at `./analysis/figures/mAF_scores.png` created in notebook `./analysis/compare_estimated_stability.ipynb`
+- Figure 6: see repo https://zenodo.org/records/10625583
+- Figure 7: located at './data/plots/exp_tm_scores.png' created in script `./scripts/zero_shot_experiment.py`
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details
 
