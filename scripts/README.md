@@ -4,35 +4,6 @@ Scripts should be executed by running DVC stages from the root of the NOMELT rep
 
 These are the scripts used to prepare data, train the model, evaluate the model, use it to engineer ENH1, and run it zero-shot on experimental data.
 
-## Script Name: [Script_Name]
-
-### Description
-- Brief description of what the script does.
-
-### Input Files
-- [Input_File_1]: Description of input file 1.
-- [Input_File_2]: Description of input file 2.
-- ...
-
-### Output Files
-- [Output_File_1]: Description of output file 1.
-- [Output_File_2]: Description of output file 2.
-- ...
-
-### Plots Generated
-- [Plot_1]: Description of plot 1.
-- [Plot_2]: Description of plot 2.
-- ...
-
-### Parameters
-- [Parameter_1]: Current value - [Value], Description.
-- [Parameter_2]: Current value - [Value], Description.
-- ...
-
-### Additional Notes
-- Any other relevant information about the script.
-
-
 ## Script Name: prepare_data.py
 
 ### Description
