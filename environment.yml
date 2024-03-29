@@ -21,7 +21,7 @@ dependencies:
   - pytorch-lightning=1.9
   - cudatoolkit-dev
   - evaluate
-  - datasets
+  - datasets=2.17.1
   - clustalw
   - mdanalysis
   - mmseqs2
