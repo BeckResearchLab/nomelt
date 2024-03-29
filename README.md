@@ -18,11 +18,12 @@ pip install -e .
 3. Installation of pyrossetta is required to run mAF-dg predictor of thermal stability. This is not included in the conda environment, as it is not available via conda. See [here](https://www.pyrosetta.org/downloads#h.6vttn15ac69d) for instructions on how to install pyrosetta. This step can be skipped if you only want to create variants of a protein or evaluate a library of variants.
 
 4. An alphafold container and dataset is also required to run mAF-dg predictor of thermal stability. It can be skipped if you only want to create variants of a protein or evaluate a library of variants. The setup for this is a little chaotic due to the format of our HPC cluster, which does not allow for docker containers. Thus the alphafold container had to be build after modification in Singularity. There are then multiple layers of configuration required. Sorry.
-   - First, build the container SIF file using the def file in `./alphafold/Singularity.def`. This will take a while. Use the standard singularity command: `singularity build alphafold.sif Singularity.def`
+   - Clone and navigate to: https://github.com/EvanKomp/alphafold. This contains an old version of the AF code that we know works and some additional scripts to build a singularity container.
+   - First, build the container SIF file using the def file in that repo `Singularity.def`. This will take a while. Use the standard singularity command: `singularity build alphafold.sif Singularity.def`
    - Download alphafolds databases if not already done. This is an extremely large dataset. See their repo: https://github.com/google-deepmind/alphafold
-   - Install the additional requirements in `./alphafold/requirements.txt` with pip: `pip install -r ./alphafold/requirements.txt`
-   - Modify the `./alphafold/run_singularity.py` (Line 37) to point towards the SIF file created in the first step.
-   - Modify the AF config file found at `.config/af_singularity_config.yaml` to point towards the alphafold database and the `run_singularity` python script from the previous step that runs the container, lines 2 and 5 respectively.
+   - Modify the `./run_singularity.py` (Line 37) to point towards the SIF file created in the first step.
+   - Navigate back to the NOMELT repo. Install the additional requirements in `./alphafold_reqs.txt` with pip: `pip install -r ./alphafold_reqs.txt`
+   - Modify the AF config file found at `.config/af_singularity_config.yaml` to point towards the alphafold database and the `run_singularity` python script from two steps above that runs the container, lines 2 and 5 respectively.
    - Finally, modify the NOMELT app config file at `./app/config.yaml` to point towards the AF config file, under the key optimization: estimator_args: af_params. See the example below:
 ```
 # Step 4: In Silico Optimization
