@@ -116,6 +116,11 @@ class MutationSubsetOptimizer:
         if args.optuna_overwrite and os.path.exists(self.params.optuna_storage):
             logger.info(f"Overwriting optuna storage file: {self.params.optuna_storage}")
             os.remove(self.params.optuna_storage)
+        ##C.P. Edits 
+        if self.params.n_trials > 2 ** len(self.mutation_set):
+            logger.info(f"mutation set < n_trials")
+            self.params.n_trials = 2 ** len(self.mutation_set)
+            logger.info(f"n_trials is now {self.params.n_trials}")
 
     def _init_estimator_call(self, study):
         logger.info("Running initial estimator call")
@@ -304,6 +309,7 @@ class MutationSubsetOptimizer:
         return storage
 
     def run(self, n_jobs: int=1, client: Client=None):
+
         """Run the optimization.
         
         Uses parallel workers if n_jobs > 1 and a dask.distributed.Client object is provided.
@@ -336,6 +342,7 @@ class MutationSubsetOptimizer:
             pass
 
         args = (OptunaObjective(self), self.params.n_trials, self.params.sampler, self.name, storage)
+
         if n_jobs == 1:
             _worker_optimize(*args)
         else:
@@ -381,7 +388,6 @@ class RepeatPruner(BasePruner):
         # type: (Study, FrozenTrial) -> bool
 
         trials = study.get_trials(deepcopy=False)
-        
         numbers=np.array([t.number for t in trials])
         bool_params= np.array([trial.params==t.params for t in trials]).astype(bool)
         bool_in_play = np.array(
@@ -423,6 +429,7 @@ def _worker_optimize(objective, n_trials, sampler, study_name, storage):
     # set up logger on this worker
     worker = get_worker()
     worker_id = worker.id
+
 
     # Generating a unique log file name
     log_file = f'./workers/worker_{worker_id}_{int(time.time())}.log'
