@@ -12,8 +12,8 @@ from nomelt.model import NOMELTModel
 
 def download_and_read_csv(url, csv_name, cache_dir='./tmp/'):
     # Create cache directory if it doesn't exist
-    os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, csv_name)
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
 
     if os.path.exists(cache_file):
         print(f"Loading data from cache: {cache_file}")
