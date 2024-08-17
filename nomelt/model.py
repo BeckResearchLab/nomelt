@@ -216,15 +216,12 @@ class NOMELTModel:
         Returns:
             list: List of mean softmax log logits scores for each input sequence.
         """
-        dataset = datasets.Dataset.from_dict({'sequence': sequences})
-        dataset = dataset.map(self._preprocess_dataset_to_model_inputs, batched=True, remove_columns=dataset.column_names)
-        dataset.set_format(type='torch')
-
-        dataloader = DataLoader(dataset, batch_size=batch_size)
+        # Use the same sequence for both input and output
+        logit_data = self.predict(sequences, sequences, batch_size=batch_size)
 
         scores = []
-        for batch in tqdm(dataloader, desc="Scoring sequences"):
-            logits = self._predict(batch)
+        for i in range(len(sequences)):
+            logits = torch.tensor(logit_data[i]['logits'])
             
             # Compute softmax
             softmax_logits = torch.nn.functional.softmax(logits, dim=-1)
@@ -233,9 +230,9 @@ class NOMELTModel:
             log_softmax_logits = torch.log(softmax_logits + 1e-10)  # adding small epsilon to avoid log(0)
             
             # Compute mean across sequence length and vocab size
-            mean_log_softmax = log_softmax_logits.mean(dim=(1, 2))
+            mean_log_softmax = log_softmax_logits.mean().item()
             
-            scores.extend(mean_log_softmax.cpu().numpy())
+            scores.append(mean_log_softmax)
 
         return scores
 
