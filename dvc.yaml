@@ -278,6 +278,24 @@ stages:
     plots:
       - ./data/plots/lipa_gym.png: # density plot of exp vs model scores
           cache: false
+
+  meltome_benchmark:
+    wdir: ./
+    cmd: python scripts/meltome_benchmark.py
+    deps:
+      - ./scripts/meltome_benchmark.py
+      - ./data/nomelt-model-full/model/
+    params:
+      - model.generation_max_length
+      - model.model_hyperparams
+    outs:
+      - ./data/nomelt-model-full/meltome_benchmark_results.json:
+          cache: false
+    plots:
+      - ./data/plots/original_meltome_scores.png:
+          cache: false
+      - ./data/plots/new_meltome_scores.png:
+          cache: false
 # proof of principle scripts
 #################################
 
