@@ -1,5 +1,5 @@
 """
-Script from Evan's Claude
+Compare original to finteuned model weights on thermal stability ProteinGym benchmark
 """
 import io
 import os
