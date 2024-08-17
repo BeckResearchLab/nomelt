@@ -5,14 +5,30 @@ import zipfile
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
 from scipy.stats import spearmanr, pearsonr
 from yaml import safe_load
 from nomelt.model import NOMELTModel
 
-def download_and_read_csv(url, csv_name):
-    response = requests.get(url)
-    z = zipfile.ZipFile(io.BytesIO(response.content))
-    return pd.read_csv(z.open(csv_name))
+def download_and_read_csv(url, csv_name, cache_dir='./data/cache'):
+    # Create cache directory if it doesn't exist
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, csv_name)
+
+    if os.path.exists(cache_file):
+        print(f"Loading data from cache: {cache_file}")
+        return pd.read_csv(cache_file)
+    else:
+        print(f"Downloading data from {url}")
+        response = requests.get(url)
+        z = zipfile.ZipFile(io.BytesIO(response.content))
+        df = pd.read_csv(z.open(csv_name))
+        
+        # Save to cache
+        df.to_csv(cache_file, index=False)
+        print(f"Data cached to {cache_file}")
+        
+        return df
 
 def evaluate_model(model, sequences, temperatures):
     scores = model.score_wts(sequences)
