@@ -10,7 +10,7 @@ from scipy.stats import spearmanr, pearsonr
 from yaml import safe_load
 from nomelt.model import NOMELTModel
 
-def download_and_read_csv(url, csv_name, cache_dir='./tmp/cache'):
+def download_and_read_csv(url, csv_name, cache_dir='./tmp/'):
     # Create cache directory if it doesn't exist
     os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, csv_name)
