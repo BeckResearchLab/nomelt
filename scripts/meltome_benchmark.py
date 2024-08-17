@@ -10,7 +10,7 @@ from scipy.stats import spearmanr, pearsonr
 from yaml import safe_load
 from nomelt.model import NOMELTModel
 
-def download_and_read_csv(url, csv_name, cache_dir='./data/cache'):
+def download_and_read_csv(url, csv_name, cache_dir='./tmp/cache'):
     # Create cache directory if it doesn't exist
     os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, csv_name)
@@ -53,7 +53,7 @@ def main():
 
     # Download and read data
     url = "https://github.com/J-SNACKKB/FLIP/raw/main/splits/meltome/splits.zip"
-    df = download_and_read_csv(url, "mixed_splits.csv")
+    df = download_and_read_csv(url, "splits/mixed_splits.csv")
 
     # Initialize models
     hyperparams = params['model']['model_hyperparams']
