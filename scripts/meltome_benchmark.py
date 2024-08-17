@@ -53,7 +53,7 @@ def main():
 
     # Download and read data
     url = "https://github.com/J-SNACKKB/FLIP/raw/main/splits/meltome/splits.zip"
-    df = download_and_read_csv(url, "splits/mixed_splits.csv")
+    df = download_and_read_csv(url, "splits/mixed_split.csv")
 
     # Initialize models
     hyperparams = params['model']['model_hyperparams']
