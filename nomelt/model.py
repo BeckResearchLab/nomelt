@@ -204,6 +204,40 @@ class NOMELTModel:
         wt_probs = [float(wt_probs_all[i][vocab['▁' + wt[i]]]) for i in range(len(wt))]
         wt_score = self.compute_metric(wt_probs, wt_probs, normalize=indels)
         return wt_score, variant_scores
+    
+    def score_wts(self, sequences: Iterable[str], batch_size: int = 5) -> list:
+        """
+        Score a list of sequences by computing the mean softmax log logits.
+        
+        Args:
+            sequences (Iterable[str]): List of protein sequences to score.
+            batch_size (int): Batch size for processing.
+        
+        Returns:
+            list: List of mean softmax log logits scores for each input sequence.
+        """
+        dataset = datasets.Dataset.from_dict({'sequence': sequences})
+        dataset = dataset.map(self._preprocess_dataset_to_model_inputs, batched=True, remove_columns=dataset.column_names)
+        dataset.set_format(type='torch')
+
+        dataloader = DataLoader(dataset, batch_size=batch_size)
+
+        scores = []
+        for batch in tqdm(dataloader, desc="Scoring sequences"):
+            logits = self._predict(batch)
+            
+            # Compute softmax
+            softmax_logits = torch.nn.functional.softmax(logits, dim=-1)
+            
+            # Compute log of softmax
+            log_softmax_logits = torch.log(softmax_logits + 1e-10)  # adding small epsilon to avoid log(0)
+            
+            # Compute mean across sequence length and vocab size
+            mean_log_softmax = log_softmax_logits.mean(dim=(1, 2))
+            
+            scores.extend(mean_log_softmax.cpu().numpy())
+
+        return scores
 
 
 
