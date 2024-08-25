@@ -106,13 +106,16 @@ def apply_mutation(sequence: str, mutation: str) -> str:
 
 def evaluate_model(model: NOMELTModel, wt_df: pd.DataFrame, variant_df: pd.DataFrame) -> dict:
     results = []
+    counter = 0
+
     for _, wt_row in tqdm(wt_df.iterrows(), total=len(wt_df), desc="Evaluating proteins"):
         wt_sequence = wt_row['sequence']
         variants = variant_df[variant_df['uniprot_id'] == wt_row['uniprot_id']]
-        
+        if counter > 3:
+            break
         if len(variants) == 0:
             continue
-
+        counter +=1
         mutated_sequences = [apply_mutation(wt_sequence, mut) for mut in variants['mutation']]
         wt_score, variant_scores = model.score_variants(wt_sequence, mutated_sequences, batch_size=5, indels=False)
         
