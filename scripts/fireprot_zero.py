@@ -59,19 +59,36 @@ def process_fireprotdb_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFram
                 'tm': row['tm'] - row['dTm']  # Calculate wildtype Tm
             }
         
-        if row['sequence'][row['position']-1] == row['wild_type']:
-            variant_data.append({
-                'uniprot_id': uniprot_id,
-                'wildtype_sequence': row['sequence'],
-                'mutation': f"{row['wild_type']}{row['position']}{row['mutation']}",
-                'delta_tm': row['dTm']
-            })
+        # Check if delta Tm is available
+        if pd.isna(row['dTm']):
+            continue
+
+        # Verify that the mutation matches the sequence
+        wt_aa = row['wild_type']
+        mut_aa = row['mutation']
+        pos = row['position'] - 1  # Convert to 0-based index
+        
+        if pos >= len(row['sequence']) or row['sequence'][pos] != wt_aa:
+            logger.warning(f"Mutation {wt_aa}{row['position']}{mut_aa} does not match sequence for {uniprot_id}")
+            continue
+
+        variant_data.append({
+            'uniprot_id': uniprot_id,
+            'wildtype_sequence': row['sequence'],
+            'mutation': f"{wt_aa}{row['position']}{mut_aa}",
+            'delta_tm': row['dTm']
+        })
 
     wt_df = pd.DataFrame.from_dict(wt_data, orient='index')
     wt_df.reset_index(inplace=True)
     wt_df.rename(columns={'index': 'uniprot_id'}, inplace=True)
 
     variant_df = pd.DataFrame(variant_data)
+    
+    # Drop any remaining rows with NaN values
+    variant_df = variant_df.dropna()
+
+    logger.info(f"Processed {len(wt_df)} wildtype sequences and {len(variant_df)} variants")
     
     return wt_df, variant_df
 
