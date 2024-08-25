@@ -218,24 +218,35 @@ class NOMELTModel:
         """
         # Use the same sequence for both input and output
         logit_data = self.predict(sequences, sequences, batch_size=batch_size)
-
+        
         scores = []
-        for i in range(len(sequences)):
+        vocab = self.tokenizer.get_vocab()
+        
+        for i, seq in enumerate(sequences):
             logits = torch.tensor(logit_data[i]['logits'])
             
             # Compute softmax
-            softmax_logits = torch.nn.functional.softmax(logits, dim=-1)
+            softmax_logits = torch.nn.functional.log_softmax(logits, dim=-1)
             
-            # Compute log of softmax
-            log_softmax_logits = torch.log(softmax_logits + 1e-10)  # adding small epsilon to avoid log(0)
+            # Get the actual sequence length (without padding)
+            seq_length = len(seq)
             
-            # Compute mean across sequence length and vocab size
-            mean_log_softmax = log_softmax_logits.mean().item()
+            # Extract probabilities for observed tokens
+            observed_probs = []
+            for j, char in enumerate(seq):
+                token = '▁' + char  # Adjust this if your tokenizer uses a different prefix
+                if token in vocab:
+                    observed_probs.append(softmax_logits[j, vocab[token]].item())
+                else:
+                    # Handle the case where the token is not in the vocabulary
+                    observed_probs.append(1e-10)  # Small probability for unknown tokens
             
-            scores.append(mean_log_softmax)
+            # Compute mean across the actual sequence length
+            mean_log_prob = np.mean(observed_probs)
+            
+            scores.append(mean_log_prob)
 
         return scores
-
 
 
 

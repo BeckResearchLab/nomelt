@@ -31,7 +31,10 @@ def download_and_read_csv(url, csv_name, cache_dir='./tmp/'):
         return df
 
 def evaluate_model(model, sequences, temperatures):
-    scores = model.score_wts(sequences)
+    scores = []
+    for i in range(0, len(sequences), 50):
+        seq_batch = sequences[i:i+50]
+        scores.extend(model.score_wts(seq_batch, batch_size=2))
     spearman_corr, spearman_p = spearmanr(temperatures, scores)
     pearson_corr, pearson_p = pearsonr(temperatures, scores)
     return scores, spearman_corr, spearman_p, pearson_corr, pearson_p
@@ -54,6 +57,8 @@ def main():
     # Download and read data
     url = "https://github.com/J-SNACKKB/FLIP/raw/main/splits/meltome/splits.zip"
     df = download_and_read_csv(url, "splits/mixed_split.csv")
+    # remove real long sequences
+    df = df[df['sequence'].str.len()<=300]
 
     # Initialize models
     hyperparams = params['model']['model_hyperparams']

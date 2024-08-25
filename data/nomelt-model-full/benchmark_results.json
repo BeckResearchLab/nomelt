@@ -1,0 +1,20 @@
+{
+  "new": {
+    "lipa": {
+      "pearson_coef": 0.2890140057583261,
+      "pearson_p": 4.670293896734481e-43,
+      "spearman_coef": 0.3205967878373402,
+      "spearman_p": 4.1698546948049733e-53,
+      "frac_qualitative_sig": 0.6286221472483685
+    }
+  },
+  "original": {
+    "lipa": {
+      "pearson_coef": 0.0070886669820527425,
+      "pearson_p": 0.7412644748916395,
+      "spearman_coef": 0.001625281365076926,
+      "spearman_p": 0.9396560014153784,
+      "frac_qualitative_sig": 0.49945479059432124
+    }
+  }
+}
