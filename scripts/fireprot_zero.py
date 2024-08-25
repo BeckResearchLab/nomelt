@@ -53,6 +53,8 @@ def process_fireprotdb_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFram
 
     for _, row in df.iterrows():
         uniprot_id = row['uniprot_id']
+        if len(row['sequence']) > 400:
+            continue
         if uniprot_id not in wt_data:
             wt_data[uniprot_id] = {
                 'sequence': row['sequence'],
@@ -114,11 +116,9 @@ def evaluate_model(model: NOMELTModel, wt_df: pd.DataFrame, variant_df: pd.DataF
         mutated_sequences = [apply_mutation(wt_sequence, mut) for mut in variants['mutation']]
         wt_score, variant_scores = model.score_variants(wt_sequence, mutated_sequences, batch_size=5, indels=False)
         
-        for _, variant, score in zip(variants.itertuples(), variants['delta_tm'], variant_scores):
+        for _, label, score in zip(variants.itertuples(), variants['delta_tm'], variant_scores):
             results.append({
-                'uniprot_id': variant.uniprot_id,
-                'mutation': variant.mutation,
-                'delta_tm': variant.delta_tm,
+                'delta_tm': label,
                 'nomelt_score': score
             })
 
