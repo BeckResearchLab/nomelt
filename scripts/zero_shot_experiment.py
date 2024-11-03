@@ -36,13 +36,30 @@ def main(sequences, temperatures, system_name):
             'p': float(spear_p)
         }
 
+        # generate random mutations and check scores
+        wt_seq = sequences[0]
+        variants = []
+        for i in range(10):
+            positions = np.random.choice(list(range(len(wt_seq))), size=10, replace=False)
+            var_ = list(wt_seq)
+            for p in positions:
+                var_[p] = str(np.random.choice(list('ACDEFGHIKLMNPQRSTVWY')))
+            variants.append(''.join(var_))
+
+        _, random_scores = model.score_variants(sequences[0], variants)
+
+        results[model_name]['random'] = random_scores
+        results[model_name]['random_mean'] = np.mean(random_scores)
+
         # Create plot
         fig, ax = plt.subplots(figsize=(4, 4))
         sns.regplot(x=temperatures, y=scores, ax=ax)
         ax.set_xlabel('Melting Temperature (°C)')
         ax.set_ylabel(f'{model_name.upper()} NOMELT Logit Score')
+        ax.hlines(np.mean(random_scores), xmin=min(temperatures), xmax=max(temperatures), label='10 random mutations', color='r')
         plt.savefig(f'./data/plots/{model_name}_{system_name}_scores.png', dpi=300, bbox_inches='tight')
         plt.close()
+
 
     return results
 

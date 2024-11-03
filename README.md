@@ -106,8 +106,7 @@ Some of the figures in the manuscript were created during the main pipeline step
 - Figure 2: located at `./analysis/figures/AA_propensities.png` created in notebook `./analysis/probe_model.ipynb`
 - Figure 3: located at `./analysis/figures/disulfide_logits.png` created in notebook `./analysis/probe_model.ipynb`
 - Figure 4: located at `./analysis/figures/estimated_shift_thermo_gen.png` created in notebook `./analysis/dataset_stats.ipynb`
-- Figure 5: located at `./analysis/figures/mAF_scores.png` created in notebook `./analysis/compare_estimated_stability.ipynb`
-- Figure 6: see repo https://zenodo.org/records/10625583
+- Figure 5: see repo https://zenodo.org/records/10625583
 - Figure 7: located at './data/plots/exp_tm_scores.png' created in script `./scripts/zero_shot_experiment.py`
 
 ## License
