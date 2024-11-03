@@ -1,0 +1,14 @@
+{
+  "Original": {
+    "spearman_correlation": -0.1340010992676487,
+    "spearman_p_value": 1.0461819369876712e-37,
+    "pearson_correlation": -0.00571109525792792,
+    "pearson_p_value": 0.586060502266146
+  },
+  "New": {
+    "spearman_correlation": 0.0643856191766336,
+    "spearman_p_value": 7.970986911625336e-10,
+    "pearson_correlation": -0.037172837582440874,
+    "pearson_p_value": 0.00039167343648485395
+  }
+}

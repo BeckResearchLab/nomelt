@@ -204,7 +204,49 @@ class NOMELTModel:
         wt_probs = [float(wt_probs_all[i][vocab['▁' + wt[i]]]) for i in range(len(wt))]
         wt_score = self.compute_metric(wt_probs, wt_probs, normalize=indels)
         return wt_score, variant_scores
+    
+    def score_wts(self, sequences: Iterable[str], batch_size: int = 5) -> list:
+        """
+        Score a list of sequences by computing the mean softmax log logits.
+        
+        Args:
+            sequences (Iterable[str]): List of protein sequences to score.
+            batch_size (int): Batch size for processing.
+        
+        Returns:
+            list: List of mean softmax log logits scores for each input sequence.
+        """
+        # Use the same sequence for both input and output
+        logit_data = self.predict(sequences, sequences, batch_size=batch_size)
+        
+        scores = []
+        vocab = self.tokenizer.get_vocab()
+        
+        for i, seq in enumerate(sequences):
+            logits = torch.tensor(logit_data[i]['logits'])
+            
+            # Compute softmax
+            softmax_logits = torch.nn.functional.log_softmax(logits, dim=-1)
+            
+            # Get the actual sequence length (without padding)
+            seq_length = len(seq)
+            
+            # Extract probabilities for observed tokens
+            observed_probs = []
+            for j, char in enumerate(seq):
+                token = '▁' + char  # Adjust this if your tokenizer uses a different prefix
+                if token in vocab:
+                    observed_probs.append(softmax_logits[j, vocab[token]].item())
+                else:
+                    # Handle the case where the token is not in the vocabulary
+                    observed_probs.append(1e-10)  # Small probability for unknown tokens
+            
+            # Compute mean across the actual sequence length
+            mean_log_prob = np.mean(observed_probs)
+            
+            scores.append(mean_log_prob)
 
+        return scores
 
 
 
