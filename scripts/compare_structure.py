@@ -210,56 +210,79 @@ if __name__ == '__main__':
     logger.info("Comparing secondary structure distributions and FATCAT alignment scores")
     assert len(thermo_structures_list) == len(predicted_structures_list)
 
-    # do dssp on all structures
+    results_df = pd.DataFrame({
+        'meso_sequence': predictions['input'],
+        'thermo_sequence': predictions['label'],
+        'generated_sequence': predictions['prediction'],
+        'thermo_pdb': predictions['thermo_pdbs'],
+        'generated_pdb': predicted_structures_list
+    })
+    
+    # Run DSSP and store results
     logger.info("Running dssp on all structures")
     if os.path.exists('./tmp/thermo_structures_dssp.txt'):
         logger.info("DSSP file already exists, skipping")
         thermo_results = list(pd.read_csv('./tmp/thermo_structures_dssp.txt', sep=' ', header=None).values)
     else:
         thermo_results = process_pdbs_dssp(thermo_structures_list, output_file='./tmp/thermo_structures_dssp.txt')
+    
     if os.path.exists('./tmp/predicted_structures_list_dssp.txt'):
         logger.info("DSSP file already exists, skipping")
         predicted_results = list(pd.read_csv('./tmp/predicted_structures_list_dssp.txt', sep=' ', header=None).values)
     else:
         predicted_results = process_pdbs_dssp(predicted_structures_list, output_file='./tmp/predicted_structures_list_dssp.txt')
 
-    # compare secondary structure distributions
-    # each line for each result is a length two iterable, first is the dssp string, second is the pdb file name
-    thermo_ss = [x[0] for x in thermo_results]
-    predicted_ss = [x[0] for x in predicted_results]
-    assert len(thermo_ss) == len(predicted_ss)
-    # convert to distributuion
-    # we have three letters: H, E, -. Get a count of each and normalize
-    jss = []
-    for t_ss, p_ss in zip(thermo_ss, predicted_ss):
-        t_ss = Counter(t_ss)
-        p_ss = Counter(p_ss)
-        t_ss = {k: v / sum(t_ss.values()) for k, v in t_ss.items()}
-        p_ss = {k: v / sum(p_ss.values()) for k, v in p_ss.items()}
-        # make sure each dict has each letter
-        for letter in ['H', 'E', '-']:
-            if letter not in t_ss:
-                t_ss[letter] = 0
-            if letter not in p_ss:
-                p_ss[letter] = 0
-        # compute jenson shannon divergence
-        js_ss = js_divergence(t_ss, p_ss)
-        logger.info(f"{t_ss}, {p_ss} JS divergence for secondary structure: {js_ss}")
-        jss.append(js_ss)
+    # Store DSSP results in dataframe
+    results_df['thermo_dssp'] = [x[0] for x in thermo_results]
+    results_df['generated_dssp'] = [x[0] for x in predicted_results]
     
-    metrics = {
-        'js_ss': (np.mean(jss), np.std(jss))
-    }
+    # Calculate and store SS distributions and JS divergence
+    js_scores = []
+    thermo_distributions = []
+    generated_distributions = []
+    
+    for t_ss, p_ss in zip(results_df['thermo_dssp'], results_df['generated_dssp']):
+        t_ss_count = Counter(t_ss)
+        p_ss_count = Counter(p_ss)
+        
+        # Normalize counts
+        t_ss_dist = {k: v / sum(t_ss_count.values()) for k, v in t_ss_count.items()}
+        p_ss_dist = {k: v / sum(p_ss_count.values()) for k, v in p_ss_count.items()}
+        
+        # Ensure all letters are present
+        for letter in ['H', 'E', '-']:
+            if letter not in t_ss_dist:
+                t_ss_dist[letter] = 0
+            if letter not in p_ss_dist:
+                p_ss_dist[letter] = 0
+        
+        js_score = js_divergence(t_ss_dist, p_ss_dist)
+        js_scores.append(js_score)
+        thermo_distributions.append(t_ss_dist)
+        generated_distributions.append(p_ss_dist)
+        
+        logger.info(f"{t_ss_dist}, {p_ss_dist} JS divergence for secondary structure: {js_score}")
 
-    # now fatcat align the structures
+    results_df['js_divergence'] = js_scores
+    results_df['thermo_ss_distribution'] = thermo_distributions
+    results_df['generated_ss_distribution'] = generated_distributions
+    
+    # Run FATCAT and store results
     logger.info("Running fatcat on all structures")
-
-    fat_scores = run_fatcat(thermo_structures_list, predicted_structures_list)
-    metrics['fatcat'] = (np.mean(fat_scores), np.std(fat_scores))
-
-    # save metrics
+    fatcat_scores = run_fatcat(results_df['thermo_pdb'].tolist(), results_df['generated_pdb'].tolist())
+    results_df['fatcat_pvalue'] = fatcat_scores
+    
+    # Calculate summary metrics
+    metrics = {
+        'js_ss': (results_df['js_divergence'].mean(), results_df['js_divergence'].std()),
+        'fatcat': (results_df['fatcat_pvalue'].mean(), results_df['fatcat_pvalue'].std())
+    }
+    
+    # Save results
+    results_df.to_csv('./data/nomelt-model/structure_analysis_results.csv', index=True)
     with open('./data/nomelt-model/structure_metrics.json', 'w') as f:
         json.dump(metrics, f)
+    
     tracker.stop()
 
 

@@ -296,6 +296,18 @@ stages:
           cache: false
       - ./data/plots/new_meltome_scores.png:
           cache: false
+  fireprot_benchmark:
+    wdir: ./
+    cmd: python scripts/fireprot_zero.py
+    deps:
+      - ./scripts/fireprot_zero.py
+      - ./data/nomelt-model-full/model/
+    params:
+      - model.generation_max_length
+      - model.model_hyperparams
+    outs:
+      - ./data/nomelt-model-full/fireprotdb_benchmark_results.json:
+          cache: false
 # proof of principle scripts
 #################################
 
